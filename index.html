@@ -1,463 +1,344 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <!-- Google Analytics Snippet -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script> 
+    <script> 
+      window.dataLayer = window.dataLayer || []; 
+      function gtag(){dataLayer.push(arguments);} 
+      gtag('js', new Date()); 
+      gtag('config', 'G-XXXXXXXXXX'); 
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaaS Booking Form - AMS Pro</title>
+    <title>SaaS Bike Rental - Booking System</title>
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3721/3721619.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <meta name="theme-color" content="#2d3436">
-    <link rel="manifest" href="manifest.json" id="pwaManifest">
-
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', Roboto, sans-serif; padding: 20px 0 50px; }
-        .main-card { border: none; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; background: #fff; max-width: 850px; margin: auto; }
-        .header-box { background: #2d3436; color: white; padding: 45px 20px; text-align: center; }
-        .unit-badge { background: #fd7e14; color: white; padding: 6px 18px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; display: inline-block; margin-top: 12px; box-shadow: 0 4px 10px rgba(253,126,20,0.3); }
-        .section-title { color: #2d3436; font-weight: 800; font-size: 1.15rem; margin-bottom: 25px; display: flex; align-items: center; border-bottom: 2px solid #f1f1f1; padding-bottom: 12px; margin-top: 10px; }
-        .section-title i { color: #fd7e14; margin-right: 12px; font-size: 1.3rem; }
-        .form-label { font-size: 0.75rem; font-weight: 800; color: #636e72; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-        .form-control, .form-select { border-radius: 12px; padding: 13px; border: 1px solid #dfe6e9; background-color: #f9f9f9; font-size: 0.95rem; }
-        .form-control:focus { box-shadow: 0 0 0 4px rgba(253, 126, 20, 0.15); border-color: #fd7e14; background-color: #fff; }
-        .btn-submit { background: #2d3436; color: white; border: none; padding: 20px; border-radius: 18px; font-weight: 800; width: 100%; transition: 0.4s; margin-top: 20px; font-size: 1.1rem; letter-spacing: 1px; }
-        .btn-submit:hover { background: #000; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        textarea { resize: none; }
-        .addon-box { border: 1px solid #dfe6e9; padding: 15px; border-radius: 12px; background: #f9f9f9; transition: 0.3s; }
-        .addon-box:hover { border-color: #fd7e14; background: #fff; }
-        .selected-item-pill { background: #e9ecef; border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; font-weight: 600; color: #495057; display: inline-flex; align-items: center; gap: 8px; margin: 4px; }
-        .editable-total { font-size: 1.5rem; font-weight: bold; color: #198754; border: 2px dashed #198754; background: #fff; text-align: right; padding: 5px 15px; border-radius: 10px; width: 220px; }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom: 120px; }
+        .hero { background: #2d3436; color: white; padding: 65px 0; text-align: center; margin-bottom: 30px; }
+        .card-motor { border: none; border-radius: 18px; box-shadow: 0 5px 15px rgba(0,0,0,0.06); transition: 0.3s; overflow: hidden; background: #fff; }
+        .card-motor:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,0,0,0.12); }
+        .search-box { background: white; padding: 30px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-top: -85px; }
+        .btn-search { background-color: #2d3436; border: none; padding: 12px; color: white; font-weight: bold; }
+        .btn-search:hover { background-color: #000; }
+        .img-wrapper { position: relative; height: 230px; overflow: hidden; background: #eaedf0; display: flex; align-items: center; justify-content: center; }
+        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .available-badge { position: absolute; top: 15px; left: 15px; font-size: 0.8rem; font-weight: bold; letter-spacing: 0.5px; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        
+        /* Selector Quantity Styling */
+        .qty-controls { display: flex; align-items: center; justify-content: center; gap: 15px; background: #f8f9fa; border-radius: 12px; padding: 10px; }
+        .btn-qty { width: 35px; height: 35px; border-radius: 50%; border: none; background: #2d3436; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-qty:hover { background: #000; }
+        .btn-qty:disabled { background: #ced4da; cursor: not-allowed; }
+        
+        /* Sticky Checkout Banner */
+        .selection-banner {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(45, 52, 54, 0.98); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            padding: 20px 0; box-shadow: 0 -5px 25px rgba(0,0,0,0.15); z-index: 2000;
+            border-radius: 20px 20px 0 0; display: none; color: white;
+        }
     </style>
 </head>
 <body>
 
+<div class="hero">
+    <div class="container">
+        <h1 class="display-5 fw-bold" id="brandTitle">Bike Rental System</h1>
+        <p class="lead opacity-75">SaaS PWA Multi-Unit Booking System</p>
+    </div>
+</div>
+
 <div class="container">
-    <div class="main-card">
-        <div class="header-box">
-            <h1 class="fw-bold m-0" style="letter-spacing: -1px;">Finalize Your Booking</h1>
-            <div id="unitSummaryContainer" class="mt-3"></div>
-            <div class="unit-badge" id="unitDisplay">Loading unit details...</div>
+    <!-- Search Form -->
+    <div class="search-box mb-5">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label fw-bold text-secondary">Pick-up Date</label>
+                <input type="date" id="start" class="form-control form-control-lg">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-bold text-secondary">Return Date</label>
+                <input type="date" id="end" class="form-control form-control-lg">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button onclick="handleFilter()" class="btn btn-search w-100 btn-lg rounded-3">Search Availability</button>
+            </div>
         </div>
+    </div>
 
-        <form id="bookingForm" class="p-4 p-md-5">
-            <!-- 1. Customer Information -->
-            <div class="section-title"><i class="fas fa-user-circle"></i> Customer Information</div>
-            <div class="row g-4 mb-5">
-                <div class="col-md-6">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" name="nama" placeholder="e.g. John Doe" required class="form-control">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">WhatsApp Number</label>
-                    <input type="tel" name="wa" placeholder="e.g. 62812345678" required class="form-control">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Email Address</label>
-                    <input type="email" name="email" placeholder="john@example.com" required class="form-control">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Instagram (Optional)</label>
-                    <input type="text" name="ig" placeholder="@username" class="form-control">
-                </div>
-            </div>
+    <!-- Status Loading -->
+    <div id="loading" class="text-center py-5" style="display: none;">
+        <div class="spinner-border text-dark" role="status"></div>
+        <p class="mt-2 text-muted fw-bold">Connecting database...</p>
+    </div>
 
-            <!-- 2. Rental Schedule -->
-            <div class="section-title"><i class="fas fa-clock"></i> Rental Schedule</div>
-            <div class="row g-4 mb-5">
-                <div class="col-md-6">
-                    <label class="form-label">Pick-up Date & Time</label>
-                    <input type="datetime-local" name="mulai" id="inputMulai" required class="form-control">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Return Date & Time</label>
-                    <input type="datetime-local" name="kembali" id="inputKembali" required class="form-control">
-                </div>
-            </div>
+    <!-- Placeholder Status Awal -->
+    <div id="placeholder" class="text-center py-5">
+        <h3 class="text-secondary fw-normal">Please select dates to check available fleets.</h3>
+    </div>
 
-            <!-- 3. ADD-ONS -->
-            <div id="addonSection" style="display: none;">
-                <div class="section-title"><i class="fas fa-plus-circle"></i> Add-ons & Services</div>
-                <div class="row g-3 mb-5">
-                    <div class="col-md-4">
-                        <div class="addon-box d-flex align-items-center">
-                            <input class="form-check-input me-3" type="checkbox" id="chkInsurance" name="opt_insurance" style="transform: scale(1.3);">
-                            <div>
-                                <label class="form-label mb-0" style="cursor:pointer;" for="chkInsurance">Motor Insurance</label>
-                                <small class="text-muted d-block" style="font-size: 0.7rem;">+Rp 50.000 / Day</small>
-                            </div>
-                        </div>
+    <!-- Container Grid Motor -->
+    <div class="row" id="motorContainer"></div>
+</div>
+
+<!-- Sticky Checkout Banner (Multi-Unit) -->
+<div id="selectionBanner" class="selection-banner">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-8 col-md-9">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                        <i class="fas fa-shopping-basket fs-5"></i>
                     </div>
-                    <div class="col-md-4">
-                        <div class="addon-box d-flex align-items-center">
-                            <input class="form-check-input me-3" type="checkbox" id="chkSurface" name="opt_surface" style="transform: scale(1.3);">
-                            <div>
-                                <label class="form-label mb-0" style="cursor:pointer;" for="chkSurface">Surface / Cleaning</label>
-                                <small class="text-muted d-block" style="font-size: 0.7rem;">+Rp 50.000 / Rent</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="addon-box d-flex align-items-center">
-                            <input class="form-check-input me-3" type="checkbox" id="chkHolder" name="opt_holder" style="transform: scale(1.3);">
-                            <div>
-                                <label class="form-label mb-0" style="cursor:pointer;" for="chkHolder">Phone Holder</label>
-                                <small class="text-muted d-block" style="font-size: 0.7rem;">+Rp 15.000 / Rent</small>
-                            </div>
-                        </div>
+                    <div>
+                        <h5 class="m-0 fw-bold" id="lblBannerCount">0 Unit(s) Selected</h5>
+                        <small class="text-white-50 text-truncate d-block" id="lblBannerSummary" style="max-width: 500px;"></small>
                     </div>
                 </div>
             </div>
-
-            <!-- 4. Payment Information -->
-            <div class="section-title"><i class="fas fa-credit-card"></i> Payment Information</div>
-            <div class="row g-4 mb-5">
-                <div class="col-md-4">
-                    <label class="form-label">Payment Status</label>
-                    <select name="tipe_bayar" class="form-select">
-                        <option value="DP">Down Payment (DP)</option>
-                        <option value="FULL">Full Payment (Lunas)</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Amount Paid (IDR)</label>
-                    <input type="number" name="nominal" id="inputNominal" placeholder="e.g. 50000" required class="form-control">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Payment Method</label>
-                    <select name="metode_pembayaran" class="form-select" required>
-                        <option value="Cash">Cash</option>
-                        <option value="QRIS">QRIS</option>
-                        <option value="Card">Card</option>
-                        <option value="Transfer BRI">Transfer BRI</option>
-                        <option value="Transfer BNI">Transfer BNI</option>
-                    </select>
-                </div>
+            <div class="col-4 col-md-3 text-end">
+                <button onclick="proceedToBookingForm()" class="btn btn-warning fw-bold btn-lg w-100 py-3 rounded-3 shadow">
+                    CONTINUE <i class="fas fa-chevron-right ms-2"></i>
+                </button>
             </div>
-
-            <!-- 5. Delivery & Pickup -->
-            <div class="section-title"><i class="fas fa-map-marked-alt"></i> Delivery & Pickup</div>
-            <div class="row g-4 mb-5">
-                <div class="col-md-6">
-                    <label class="form-label">Delivery Location</label>
-                    <textarea name="antar" rows="3" placeholder="Hotel name / Address" required class="form-control"></textarea>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Pickup Location</label>
-                    <textarea name="jemput" rows="3" placeholder="Return location" required class="form-control"></textarea>
-                </div>
-            </div>
-
-            <!-- 6. LIVE PRICE SUMMARY (DENGAN TOTAL HARGA DINAMIS YANG BISA DI-EDIT) -->
-            <div class="section-title"><i class="fas fa-receipt"></i> Price Details</div>
-            <div class="bg-light p-4 rounded-3 border mb-4">
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Rental Duration:</span>
-                    <span class="fw-bold text-dark" id="lblDurasi">1 Day(s)</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Base Rental Fee (All Selected Units):</span>
-                    <span class="fw-bold text-dark" id="lblBase">IDR 0</span>
-                </div>
-                <div class="justify-content-between mb-2 text-danger" id="rowInsurance" style="display: none !important;">
-                    <span><i class="fas fa-shield-alt me-1"></i> Motor Insurance (per Unit):</span>
-                    <span class="fw-bold" id="lblInsurance">+IDR 0</span>
-                </div>
-                <div class="justify-content-between mb-2 text-danger" id="rowSurface" style="display: none !important;">
-                    <span><i class="fas fa-soap me-1"></i> Surface / Cleaning Fee (per Unit):</span>
-                    <span class="fw-bold" id="lblSurface">+IDR 0</span>
-                </div>
-                <div class="justify-content-between mb-2 text-danger" id="rowHolder" style="display: none !important;">
-                    <span><i class="fas fa-mobile-alt me-1"></i> Phone Holder Accessories (per Unit):</span>
-                    <span class="fw-bold" id="lblHolder">+IDR 0</span>
-                </div>
-                <hr class="my-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark fs-5">Grand Total (Editable):</span>
-                    <!-- Input Editable untuk Custom Harga -->
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold text-success fs-4">IDR</span>
-                        <input type="number" id="inputGrandTotal" class="editable-total" value="0">
-                    </div>
-                </div>
-            </div>
-
-            <button type="submit" id="btnSubmit" class="btn-submit shadow-lg">
-                CONFIRM & SEND BOOKING
-            </button>
-        </form>
-
-        <div class="bg-light p-4 text-center text-muted" style="font-size: 0.75rem; border-top: 1px solid #eee;">
-            <strong>MRD Digital Solution</strong> &copy; 2026 - All Rights Reserved
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw6C9fNfM7Wf_0B2vXm38R8lKshGfL_YfMco8iN_Spt_8qNHeFvX0xZ3Wf2C2z7F9C6/exec";
+    const params = new URLSearchParams(window.location.search);
+    const clientToken = params.get('token') || 'mrd';
+    
+    // API URL mengarah ke doGet Master Registry
+    const API_URL = `https://script.google.com/macros/s/AKfycbztqieZAjsgdRXCTdEqvsmDinhnAzd3D1kISRFL1d_4jAJZfro8SLuIJ7FG4BqimYEI/exec?token=${clientToken}`;
 
-    let selectedUnits = [];
-    let activationToken = "";
-    let calculatedGrandTotal = 0; // Menyimpan nilai kalkulasi asli sistem
-    let userHasEditedTotal = false;
+    let motors = [];
+    let bookings = [];
+    let isDataLoaded = false;
 
-    window.onload = () => {
-        const params = new URLSearchParams(window.location.search);
-        activationToken = params.get('token') || 'mrd';
+    let selectedQty = {};      
+    let availablePlates = {};   
+    let groupMetaData = {};     
 
-        const showAddons = (activationToken.toLowerCase() === "karbit") || (params.get('addons') === "true");
-        if (showAddons) {
-            document.getElementById('addonSection').style.display = 'block';
-        }
+    document.getElementById('brandTitle').innerText = `${clientToken.charAt(0).toUpperCase() + clientToken.slice(1)} Rental`;
 
-        const paramMotor = params.get('motor') || '';
-        const paramPrice = params.get('price') || '';
-        const paramBrand = params.get('brand') || '';
-        const paramType = params.get('type') || '';
+    function getFallbackImage(type) {
+        const t = type.toLowerCase();
+        if (t.includes("nmax")) return "https://i.ibb.co.com/1JzVD8KB/NMAX-NEO-S-BLACK.png";
+        if (t.includes("vespa")) return "https://i.ibb.co.com/WpjDP07V/harga-vespa-matic-2023-1.webp";
+        if (t.includes("scoopy")) return "https://www.wahanahonda.com/assets/upload/produk/gambar/PRODUK_GAMBAR_48_2025-11-13.webp";
+        if (t.includes("vario")) return "https://i.ibb.co.com/9kbm6Pwh/images-15.jpg";
+        if (t.includes("beat")) return "https://i.ibb.co.com/BHDpWZXS/honda-beat-deluxe-smart-key-deluxe-matte-blue-01-warna.webp";
+        if (t.includes("fazzio")) return "https://i.ibb.co.com/nqgDF9kV/images-11.jpg";
+        if (t.includes("stylo")) return "https://i.ibb.co.com/ycFPFg1k/008881800-1706860240-20240202-144627.jpg";
+        if (t.includes("filano")) return "https://cdn.antaranews.com/cache/1200x800/2024/11/07/1000446916.jpg";
+        return "https://i.ibb.co.com/WpjDP07V/harga-vespa-matic-2023-1.webp";
+    }
 
-        if (paramMotor) {
-            const arrMotors = paramMotor.split(',');
-            const arrPrices = paramPrice.split(',');
-            const arrBrands = paramBrand.split(',');
-            const arrTypes = paramType.split(',');
-
-            for (let i = 0; i < arrMotors.length; i++) {
-                if (arrMotors[i].trim() !== '') {
-                    selectedUnits.push({
-                        motor: arrMotors[i].trim(),
-                        price: parseInt(arrPrices[i]) || 0,
-                        brand: arrBrands[i] ? arrBrands[i].trim() : '',
-                        type: arrTypes[i] ? arrTypes[i].trim() : ''
-                    });
-                }
-            }
-        }
-
-        if (selectedUnits.length > 0) {
-            let containerHtml = "";
-            selectedUnits.forEach(u => {
-                containerHtml += `
-                    <div class="selected-item-pill">
-                        <i class="fas fa-motorcycle text-warning"></i>
-                        ${u.brand} ${u.type} (${u.motor.toUpperCase()}) - Rp ${u.price.toLocaleString('id-ID')}
-                    </div>
-                `;
-            });
-
-            document.getElementById('unitSummaryContainer').innerHTML = containerHtml;
-            document.getElementById('unitDisplay').innerText = `${selectedUnits.length} Unit(s) Selected`;
-
-            if(params.has('start')) document.getElementById('inputMulai').value = params.get('start') + "T10:00";
-            if(params.has('end')) document.getElementById('inputKembali').value = params.get('end') + "T10:00";
-
-            hitungTotal();
-        }
-    };
-
-    function hitungTotal() {
-        const tglMulaiVal = document.getElementById('inputMulai').value;
-        const tglKembaliVal = document.getElementById('inputKembali').value;
-
-        if (!tglMulaiVal || !tglKembaliVal || selectedUnits.length === 0) return;
-
-        const dMulai = new Date(tglMulaiVal);
-        const dKembali = new Date(tglKembaliVal);
-        
-        let jmlHari = 1;
-        if (dKembali > dMulai) {
-            const selisihWaktu = Math.abs(dKembali - dMulai);
-            jmlHari = Math.ceil(selisihWaktu / (1000 * 60 * 60 * 24)) || 1;
-        }
-
-        const baseRental = selectedUnits.reduce((sum, item) => sum + (item.price * jmlHari), 0);
-
-        const totalUnits = selectedUnits.length;
-        const chkIns = document.getElementById('chkInsurance');
-        const chkSurf = document.getElementById('chkSurface');
-        const chkHold = document.getElementById('chkHolder');
-
-        const insChecked = chkIns ? chkIns.checked : false;
-        const surfChecked = chkSurf ? chkSurf.checked : false;
-        const holdChecked = chkHold ? chkHold.checked : false;
-
-        const valInsurance = insChecked ? (50000 * jmlHari * totalUnits) : 0;
-        const valSurface = surfChecked ? (50000 * totalUnits) : 0;
-        const valHolder = holdChecked ? (15000 * totalUnits) : 0;
-
-        calculatedGrandTotal = baseRental + valInsurance + valSurface + valHolder;
-
-        // Render Ringkasan UI
-        if (chkIns) {
-            document.getElementById('rowInsurance').style.setProperty('display', insChecked ? 'flex' : 'none', 'important');
-            document.getElementById('lblInsurance').innerText = `+IDR ${valInsurance.toLocaleString('id-ID')}`;
-        }
-        if (chkSurf) {
-            document.getElementById('rowSurface').style.setProperty('display', surfChecked ? 'flex' : 'none', 'important');
-            document.getElementById('lblSurface').innerText = `+IDR ${valSurface.toLocaleString('id-ID')}`;
-        }
-        if (chkHold) {
-            document.getElementById('rowHolder').style.setProperty('display', holdChecked ? 'flex' : 'none', 'important');
-            document.getElementById('lblHolder').innerText = `+IDR ${valHolder.toLocaleString('id-ID')}`;
-        }
-
-        document.getElementById('lblDurasi').innerText = `${jmlHari} Day(s) (${totalUnits} Unit)`;
-        document.getElementById('lblBase').innerText = `IDR ${baseRental.toLocaleString('id-ID')}`;
-        
-        // Update input Grand Total hanya jika pengguna belum pernah mengeditnya secara manual
-        if (!userHasEditedTotal) {
-            document.getElementById('inputGrandTotal').value = calculatedGrandTotal;
+    async function fetchData() {
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            motors = data.items || [];
+            bookings = data.bookings || [];
+            isDataLoaded = true;
+        } catch (error) { 
+            console.error("Gagal menarik data API:", error); 
         }
     }
 
-    // Deteksi interaksi manual pengguna pada input Grand Total
-    document.getElementById('inputGrandTotal').addEventListener('input', () => {
-        userHasEditedTotal = true;
-    });
+    // Pembersihan spasi nomor polisi DK agar pencocokan presisi
+    function cleanPlate(plate) {
+        return String(plate).trim().replace(/\s/g, '').toLowerCase();
+    }
 
-    document.getElementById('inputMulai').addEventListener('change', hitungTotal);
-    document.getElementById('inputKembali').addEventListener('change', hitungTotal);
-    if (document.getElementById('chkInsurance')) document.getElementById('chkInsurance').addEventListener('change', hitungTotal);
-    if (document.getElementById('chkSurface')) document.getElementById('chkSurface').addEventListener('change', hitungTotal);
-    if (document.getElementById('chkHolder')) document.getElementById('chkHolder').addEventListener('change', hitungTotal);
+    function isOccupied(plate, startReq, endReq) {
+        const sReq = new Date(startReq);
+        const eReq = new Date(endReq);
+        const cleanedTargetPlate = cleanPlate(plate);
 
-    // SUBMIT FORM DENGAN METODE PROPORSIONAL SPLITTING
-    document.getElementById('bookingForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('btnSubmit');
-        const formData = new FormData(e.target);
+        return bookings.some(b => {
+            if (cleanPlate(b.no_motor) !== cleanedTargetPlate) return false;
+            
+            const st = b.status ? b.status.toLowerCase() : "";
+            if (st === "cancel" || st === "done") return false;
+
+            const bStart = new Date(b.start);
+            const bEnd = new Date(b.end);
+
+            if (isNaN(bStart.getTime()) || isNaN(bEnd.getTime())) return false;
+
+            return (sReq < bEnd && eReq > bStart);
+        });
+    }
+
+    function renderList(sDate, eDate) {
+        const container = document.getElementById('motorContainer');
+        container.innerHTML = "";
         
-        if (selectedUnits.length === 0) {
-            alert("❌ Gagal: Tidak ada unit motor yang terdeteksi.");
+        availablePlates = {};
+        groupMetaData = {};
+        
+        let totalAvailable = 0;
+
+        motors.forEach(m => {
+            const plate = m[0], type = m[1], brand = m[2], price = m[3], customImg = m[4], status = m[5];
+            
+            // Filter unit rusak/dalam perbaikan atau sedang tersewa di tanggal pilihan
+            const clnStatus = status.toLowerCase();
+            if (clnStatus === "bengkel" || clnStatus === "servis" || clnStatus === "rusak" || isOccupied(plate, sDate, eDate)) return;
+            
+            totalAvailable++;
+            const groupKey = `${brand.replace(/\s+/g, '_')}_${type.replace(/\s+/g, '_')}`;
+            
+            if (!availablePlates[groupKey]) {
+                availablePlates[groupKey] = [];
+                groupMetaData[groupKey] = {
+                    brand: brand,
+                    type: type,
+                    price: price,
+                    image: customImg ? customImg : getFallbackImage(type)
+                };
+            }
+            availablePlates[groupKey].push(plate);
+        });
+
+        if (totalAvailable === 0) {
+            container.innerHTML = `<div class="text-center py-5 w-100"><h3>😔 Sorry, we are fully booked for these dates.</h3></div>`;
             return;
         }
 
-        const finalGrandTotal = parseInt(document.getElementById('inputGrandTotal').value) || calculatedGrandTotal;
-        const totalNominalPaid = parseInt(formData.get('nominal')) || 0;
-        const tipeBayar = formData.get('tipe_bayar'); // "DP" atau "FULL"
+        for (const key in availablePlates) {
+            const group = groupMetaData[key];
+            const maxUnits = availablePlates[key].length;
+            const currentQty = selectedQty[key] || 0;
 
-        btn.disabled = true;
-        
-        const dMulai = new Date(formData.get('mulai'));
-        const dKembali = new Date(formData.get('kembali'));
-        const selisihWaktu = Math.abs(dKembali - dMulai);
-        const jmlHari = Math.ceil(selisihWaktu / (1000 * 60 * 60 * 24)) || 1;
-
-        // Ambil status asuransi per unit
-        const insChecked = document.getElementById('chkInsurance') ? document.getElementById('chkInsurance').checked : false;
-        const surfChecked = document.getElementById('chkSurface') ? document.getElementById('chkSurface').checked : false;
-        const holdChecked = document.getElementById('chkHolder') ? document.getElementById('chkHolder').checked : false;
-
-        let successCounter = 0;
-        let runningTotalNewPrice = 0;
-        let runningTotalDp = 0;
-        let runningTotalBayar = 0;
-
-        // Loop untuk melakukan kalkulasi & kirim request berurutan
-        for (let i = 0; i < selectedUnits.length; i++) {
-            const currentUnit = selectedUnits[i];
-            btn.innerText = `PROCESSING UNIT ${i + 1} OF ${selectedUnits.length}...`;
-
-            // 1. Hitung Harga Asli Unit ini sebelum diskon (termasuk Add-on miliknya)
-            const unitAddons = (insChecked ? (50000 * jmlHari) : 0) + (surfChecked ? 50000 : 0) + (holdChecked ? 15000 : 0);
-            const unitOriginalPrice = (currentUnit.price * jmlHari) + unitAddons;
-
-            // 2. Hitung Bobot Rasio Unit ini terhadap akumulasi harga asli seluruh unit
-            const ratio = unitOriginalPrice / calculatedGrandTotal;
-
-            // 3. Tentukan Harga Baru (Proporsional) & Alokasi Pembayaran
-            let unitNewPrice = 0;
-            let unitDp = 0;
-            let unitBayar = 0;
-
-            if (i === selectedUnits.length - 1) {
-                // Unit terakhir mengambil sisa nilai untuk menghindari selisih desimal pembulatan
-                unitNewPrice = finalGrandTotal - runningTotalNewPrice;
-                if (tipeBayar === "DP") {
-                    unitDp = totalNominalPaid - runningTotalDp;
-                } else {
-                    unitBayar = totalNominalPaid - runningTotalBayar;
-                }
-            } else {
-                unitNewPrice = Math.round(finalGrandTotal * ratio);
-                if (tipeBayar === "DP") {
-                    unitDp = Math.round(totalNominalPaid * (unitNewPrice / finalGrandTotal));
-                    runningTotalDp += unitDp;
-                } else {
-                    unitBayar = Math.round(totalNominalPaid * (unitNewPrice / finalGrandTotal));
-                    runningTotalBayar += unitBayar;
-                }
-                runningTotalNewPrice += unitNewPrice;
-            }
-
-            // Hitung harga dasar sewa harian baru setelah diskon untuk dicatat di Appsheet
-            // (Harga sewa harian = New price dikurangi addons, dibagi jumlah hari)
-            const unitNewBasePrice = Math.round((unitNewPrice - unitAddons) / jmlHari);
-
-            // Set marker sebagai penanda kelompok order di database
-            const groupMarker = ` [Group Booking ${i + 1}/${selectedUnits.length}]`;
-
-            const formatPesanGAS = `Booking
-No Motor: ${currentUnit.motor}
-Nama: ${formData.get('nama')}
-No WA: ${formData.get('wa')}
-Email: ${formData.get('email')}
-IG: ${formData.get('ig') || '-'}
-Jml Helm: 2
-Tgl Sewa: ${formatDate(formData.get('mulai'))}
-Tgl Kembali: ${formatDate(formData.get('kembali'))}
-Harga: ${unitNewBasePrice}
-Byr DP: ${unitDp}
-Jml Byr: ${unitBayar}
-Status: Booked
-Insurance: ${insChecked ? (50000 * jmlHari) : 0}
-Surface: ${surfChecked ? 50000 : 0}
-Phone Holder: ${holdChecked ? 15000 : 0}
-Payment: ${formData.get('metode_pembayaran')}
-Alamat Jemput: ${formData.get('jemput')}${groupMarker}
-Alamat Antar: ${formData.get('antar')}`;
-
-            try {
-                const response = await fetch(WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ 
-                        token: activationToken,
-                        message: formatPesanGAS, 
-                        sender: "WEB_FORM", 
-                        sessionId: "WEB" 
-                    })
-                });
-                
-                if (response.ok) {
-                    successCounter++;
-                }
-            } catch (error) {
-                console.error(`Gagal mengirimkan unit ${currentUnit.motor}:`, error);
-            }
+            container.innerHTML += `
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card card-motor h-100 border-0 shadow-sm">
+                        <div class="img-wrapper">
+                            <span class="badge bg-success available-badge rounded-pill">${maxUnits} Unit(s) Available</span>
+                            <img src="${group.image}" alt="${group.type}" onerror="this.onerror=null;this.src='${getFallbackImage(group.type)}';">
+                        </div>
+                        <div class="card-body p-4 text-center">
+                            <h4 class="fw-bold text-dark mb-0 text-uppercase">${group.brand}</h4>
+                            <h5 class="text-secondary mb-4">${group.type}</h5>
+                            <div class="bg-light p-3 rounded mb-4">
+                                <span class="d-block text-muted small">Daily Rate</span>
+                                <span class="fw-bold fs-4 text-dark">IDR ${Number(group.price).toLocaleString('id-ID')}</span>
+                            </div>
+                            
+                            <div class="qty-controls">
+                                <button onclick="adjustQty('${key}', -1)" class="btn-qty" id="btnMin-${key}">-</button>
+                                <span class="fw-bold fs-5 px-2" id="qtyVal-${key}">${currentQty}</span>
+                                <button onclick="adjustQty('${key}', 1)" class="btn-qty" id="btnPlus-${key}">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
         }
-
-        if (successCounter === selectedUnits.length) {
-            alert(`✅ Berhasil!\nSeluruh unit (${successCounter}/${selectedUnits.length}) berhasil terdaftar secara proporsional.`);
-            window.location.href = "index.html";
-        } else if (successCounter > 0) {
-            alert(`⚠️ Berhasil Sebagian:\nHanya ${successCounter} dari ${selectedUnits.length} unit yang berhasil dikirimkan.`);
-        } else {
-            alert("❌ Terjadi kesalahan saat memproses booking. Coba beberapa saat lagi.");
-        }
-
-        btn.disabled = false;
-        btn.innerText = "CONFIRM & SEND BOOKING";
-    });
-
-    function formatDate(dt) {
-        if(!dt) return "";
-        const d = new Date(dt);
-        const day = String(d.getDate()).padStart(2,'0');
-        const month = String(d.getMonth()+1).padStart(2,'0');
-        const year = d.getFullYear();
-        const hours = String(d.getHours()).padStart(2,'0');
-        const minutes = String(d.getMinutes()).padStart(2,'0');
-        return `${day}-${month}-${year} ${hours}:${minutes}`;
     }
+
+    async function handleFilter() {
+        const start = document.getElementById('start').value;
+        const end = document.getElementById('end').value;
+        if (!start || !end) { alert("Please select both dates."); return; }
+        
+        selectedQty = {};
+        updateSelectionBanner();
+
+        document.getElementById('placeholder').style.display = 'none';
+        document.getElementById('motorContainer').innerHTML = "";
+        document.getElementById('loading').style.display = 'block';
+        
+        if (!isDataLoaded) await fetchData();
+        
+        setTimeout(() => {
+            document.getElementById('loading').style.display = 'none';
+            renderList(start, end);
+        }, 500);
+    }
+
+    function adjustQty(key, delta) {
+        const max = availablePlates[key].length;
+        let current = selectedQty[key] || 0;
+        
+        current += delta;
+        if (current < 0) current = 0;
+        if (current > max) current = max;
+        
+        selectedQty[key] = current;
+        document.getElementById(`qtyVal-${key}`).innerText = current;
+
+        updateSelectionBanner();
+    }
+
+    function updateSelectionBanner() {
+        let totalSelected = 0;
+        let summaryList = [];
+
+        for (const key in selectedQty) {
+            const qty = selectedQty[key];
+            if (qty > 0) {
+                totalSelected += qty;
+                const metadata = groupMetaData[key];
+                summaryList.push(`${qty}x ${metadata.type}`);
+            }
+        }
+
+        const banner = document.getElementById('selectionBanner');
+        if (totalSelected > 0) {
+            banner.style.display = 'block';
+            document.getElementById('lblBannerCount').innerText = `${totalSelected} Unit(s) Selected`;
+            document.getElementById('lblBannerSummary').innerText = summaryList.join(', ');
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    function proceedToBookingForm() {
+        let finalPlates = [];
+        let finalPrices = [];
+        let finalBrands = [];
+        let finalTypes = [];
+
+        for (const key in selectedQty) {
+            const qty = selectedQty[key];
+            if (qty > 0) {
+                const plates = availablePlates[key];
+                const meta = groupMetaData[key];
+                
+                for (let i = 0; i < qty; i++) {
+                    finalPlates.push(plates[i]);
+                    finalPrices.push(meta.price);
+                    finalBrands.push(meta.brand);
+                    finalTypes.push(meta.type);
+                }
+            }
+        }
+
+        const start = document.getElementById('start').value;
+        const end = document.getElementById('end').value;
+
+        const urlParams = new URLSearchParams({
+            token: clientToken,
+            motor: finalPlates.join(','),
+            price: finalPrices.join(','),
+            brand: finalBrands.join(','),
+            type: finalTypes.join(','),
+            start: start,
+            end: end
+        });
+
+        window.location.href = `form.html?${urlParams.toString()}`;
+    }
+
+    fetchData();
 </script>
 </body>
 </html>

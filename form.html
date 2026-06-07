@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SaaS Booking Form - AMS Pro</title>
-    <!-- Bootstrap & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#2d3436">
     <link rel="manifest" href="manifest.json" id="pwaManifest">
 
@@ -28,20 +26,19 @@
         .addon-box { border: 1px solid #dfe6e9; padding: 15px; border-radius: 12px; background: #f9f9f9; transition: 0.3s; }
         .addon-box:hover { border-color: #fd7e14; background: #fff; }
         .selected-item-pill { background: #e9ecef; border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; font-weight: 600; color: #495057; display: inline-flex; align-items: center; gap: 8px; margin: 4px; }
+        .editable-total { font-size: 1.5rem; font-weight: bold; color: #198754; border: 2px dashed #198754; background: #fff; text-align: right; padding: 5px 15px; border-radius: 10px; width: 220px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="main-card">
-        <!-- Header Section -->
         <div class="header-box">
             <h1 class="fw-bold m-0" style="letter-spacing: -1px;">Finalize Your Booking</h1>
             <div id="unitSummaryContainer" class="mt-3"></div>
             <div class="unit-badge" id="unitDisplay">Loading unit details...</div>
         </div>
 
-        <!-- Form Section -->
         <form id="bookingForm" class="p-4 p-md-5">
             <!-- 1. Customer Information -->
             <div class="section-title"><i class="fas fa-user-circle"></i> Customer Information</div>
@@ -77,7 +74,7 @@
                 </div>
             </div>
 
-            <!-- 3. ADD-ONS (Hanya tampil untuk Klien Tertentu) -->
+            <!-- 3. ADD-ONS -->
             <div id="addonSection" style="display: none;">
                 <div class="section-title"><i class="fas fa-plus-circle"></i> Add-ons & Services</div>
                 <div class="row g-3 mb-5">
@@ -123,7 +120,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Amount Paid (IDR)</label>
-                    <input type="number" name="nominal" placeholder="e.g. 50000" required class="form-control">
+                    <input type="number" name="nominal" id="inputNominal" placeholder="e.g. 50000" required class="form-control">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Payment Method</label>
@@ -150,7 +147,7 @@
                 </div>
             </div>
 
-            <!-- 6. LIVE PRICE SUMMARY -->
+            <!-- 6. LIVE PRICE SUMMARY (DENGAN TOTAL HARGA DINAMIS YANG BISA DI-EDIT) -->
             <div class="section-title"><i class="fas fa-receipt"></i> Price Details</div>
             <div class="bg-light p-4 rounded-3 border mb-4">
                 <div class="d-flex justify-content-between mb-2">
@@ -175,18 +172,20 @@
                 </div>
                 <hr class="my-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark fs-5">Estimated Grand Total:</span>
-                    <span class="fw-bold text-success fs-4" id="lblGrandTotal">IDR 0</span>
+                    <span class="fw-bold text-dark fs-5">Grand Total (Editable):</span>
+                    <!-- Input Editable untuk Custom Harga -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-success fs-4">IDR</span>
+                        <input type="number" id="inputGrandTotal" class="editable-total" value="0">
+                    </div>
                 </div>
             </div>
 
-            <!-- Submit Button -->
             <button type="submit" id="btnSubmit" class="btn-submit shadow-lg">
                 CONFIRM & SEND BOOKING
             </button>
         </form>
 
-        <!-- Footer -->
         <div class="bg-light p-4 text-center text-muted" style="font-size: 0.75rem; border-top: 1px solid #eee;">
             <strong>MRD Digital Solution</strong> &copy; 2026 - All Rights Reserved
         </div>
@@ -194,23 +193,22 @@
 </div>
 
 <script>
-    // URL Webhook Utama (Master Registry router)
-    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw6C9fNfM7Wf_0B2vXm38R8lKshGfL_YfMco8iN_Spt_8qNHeFvX0xZ3Wf2C2z7F9C6/exec"; // Masukkan URL GAS Master Registry Anda di sini
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw6C9fNfM7Wf_0B2vXm38R8lKshGfL_YfMco8iN_Spt_8qNHeFvX0xZ3Wf2C2z7F9C6/exec";
 
     let selectedUnits = [];
     let activationToken = "";
+    let calculatedGrandTotal = 0; // Menyimpan nilai kalkulasi asli sistem
+    let userHasEditedTotal = false;
 
     window.onload = () => {
         const params = new URLSearchParams(window.location.search);
-        activationToken = params.get('token') || '';
+        activationToken = params.get('token') || 'mrd';
 
-        // Tampilkan addon hanya jika token adalah 'karbit' atau ada bypass query '?addons=true'
         const showAddons = (activationToken.toLowerCase() === "karbit") || (params.get('addons') === "true");
         if (showAddons) {
             document.getElementById('addonSection').style.display = 'block';
         }
 
-        // Parsing data parameter bertipe comma-separated (multi-unit)
         const paramMotor = params.get('motor') || '';
         const paramPrice = params.get('price') || '';
         const paramBrand = params.get('brand') || '';
@@ -234,12 +232,9 @@
             }
         }
 
-        // Tampilkan list motor yang dipilih di UI
         if (selectedUnits.length > 0) {
             let containerHtml = "";
-            let displayNames = [];
             selectedUnits.forEach(u => {
-                displayNames.push(`${u.brand} ${u.type}`);
                 containerHtml += `
                     <div class="selected-item-pill">
                         <i class="fas fa-motorcycle text-warning"></i>
@@ -251,13 +246,10 @@
             document.getElementById('unitSummaryContainer').innerHTML = containerHtml;
             document.getElementById('unitDisplay').innerText = `${selectedUnits.length} Unit(s) Selected`;
 
-            // Set default Pick-up/Return time H+1 jam 10 pagi jika parameter tanggal tersedia
-            if (params.has('start')) document.getElementById('inputMulai').value = params.get('start') + "T10:00";
-            if (params.has('end')) document.getElementById('inputKembali').value = params.get('end') + "T10:00";
+            if(params.has('start')) document.getElementById('inputMulai').value = params.get('start') + "T10:00";
+            if(params.has('end')) document.getElementById('inputKembali').value = params.get('end') + "T10:00";
 
             hitungTotal();
-        } else {
-            document.getElementById('unitDisplay').innerText = "No unit selected";
         }
     };
 
@@ -276,10 +268,8 @@
             jmlHari = Math.ceil(selisihWaktu / (1000 * 60 * 60 * 24)) || 1;
         }
 
-        // Kalkulasi base rental seluruh unit
         const baseRental = selectedUnits.reduce((sum, item) => sum + (item.price * jmlHari), 0);
 
-        // Kalkulasi add-ons proporsional terhadap total unit yang disewa
         const totalUnits = selectedUnits.length;
         const chkIns = document.getElementById('chkInsurance');
         const chkSurf = document.getElementById('chkSurface');
@@ -293,7 +283,7 @@
         const valSurface = surfChecked ? (50000 * totalUnits) : 0;
         const valHolder = holdChecked ? (15000 * totalUnits) : 0;
 
-        const grandTotal = baseRental + valInsurance + valSurface + valHolder;
+        calculatedGrandTotal = baseRental + valInsurance + valSurface + valHolder;
 
         // Render Ringkasan UI
         if (chkIns) {
@@ -311,18 +301,25 @@
 
         document.getElementById('lblDurasi').innerText = `${jmlHari} Day(s) (${totalUnits} Unit)`;
         document.getElementById('lblBase').innerText = `IDR ${baseRental.toLocaleString('id-ID')}`;
-        document.getElementById('lblGrandTotal').innerText = `IDR ${grandTotal.toLocaleString('id-ID')}`;
+        
+        // Update input Grand Total hanya jika pengguna belum pernah mengeditnya secara manual
+        if (!userHasEditedTotal) {
+            document.getElementById('inputGrandTotal').value = calculatedGrandTotal;
+        }
     }
 
-    // Listener interaktif
+    // Deteksi interaksi manual pengguna pada input Grand Total
+    document.getElementById('inputGrandTotal').addEventListener('input', () => {
+        userHasEditedTotal = true;
+    });
+
     document.getElementById('inputMulai').addEventListener('change', hitungTotal);
     document.getElementById('inputKembali').addEventListener('change', hitungTotal);
-    
     if (document.getElementById('chkInsurance')) document.getElementById('chkInsurance').addEventListener('change', hitungTotal);
     if (document.getElementById('chkSurface')) document.getElementById('chkSurface').addEventListener('change', hitungTotal);
     if (document.getElementById('chkHolder')) document.getElementById('chkHolder').addEventListener('change', hitungTotal);
 
-    // Proses Submit menggunakan Sequential Async Fetch (Looping Teratur)
+    // SUBMIT FORM DENGAN METODE PROPORSIONAL SPLITTING
     document.getElementById('bookingForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmit');
@@ -333,6 +330,10 @@
             return;
         }
 
+        const finalGrandTotal = parseInt(document.getElementById('inputGrandTotal').value) || calculatedGrandTotal;
+        const totalNominalPaid = parseInt(formData.get('nominal')) || 0;
+        const tipeBayar = formData.get('tipe_bayar'); // "DP" atau "FULL"
+
         btn.disabled = true;
         
         const dMulai = new Date(formData.get('mulai'));
@@ -340,48 +341,59 @@
         const selisihWaktu = Math.abs(dKembali - dMulai);
         const jmlHari = Math.ceil(selisihWaktu / (1000 * 60 * 60 * 24)) || 1;
 
-        // Tentukan nilai add-ons total
-        const chkIns = document.getElementById('chkInsurance');
-        const chkSurf = document.getElementById('chkSurface');
-        const chkHold = document.getElementById('chkHolder');
-
-        const totalInsurance = (chkIns && chkIns.checked) ? (50000 * jmlHari * selectedUnits.length) : 0;
-        const totalSurface = (chkSurf && chkSurf.checked) ? (50000 * selectedUnits.length) : 0;
-        const totalHolder = (chkHold && chkHold.checked) ? (15000 * selectedUnits.length) : 0;
+        // Ambil status asuransi per unit
+        const insChecked = document.getElementById('chkInsurance') ? document.getElementById('chkInsurance').checked : false;
+        const surfChecked = document.getElementById('chkSurface') ? document.getElementById('chkSurface').checked : false;
+        const holdChecked = document.getElementById('chkHolder') ? document.getElementById('chkHolder').checked : false;
 
         let successCounter = 0;
+        let runningTotalNewPrice = 0;
+        let runningTotalDp = 0;
+        let runningTotalBayar = 0;
 
-        // Mulai perulangan POST secara berurutan
+        // Loop untuk melakukan kalkulasi & kirim request berurutan
         for (let i = 0; i < selectedUnits.length; i++) {
             const currentUnit = selectedUnits[i];
             btn.innerText = `PROCESSING UNIT ${i + 1} OF ${selectedUnits.length}...`;
 
-            // Aturan Distribusi Pembayaran & Add-on (Hanya di Hit Pertama)
-            let dpValue = 0;
-            let bayarValue = 0;
-            let unitInsurance = 0;
-            let unitSurface = 0;
-            let unitHolder = 0;
-            let textMarker = "";
+            // 1. Hitung Harga Asli Unit ini sebelum diskon (termasuk Add-on miliknya)
+            const unitAddons = (insChecked ? (50000 * jmlHari) : 0) + (surfChecked ? 50000 : 0) + (holdChecked ? 15000 : 0);
+            const unitOriginalPrice = (currentUnit.price * jmlHari) + unitAddons;
 
-            if (i === 0) {
-                // Booking pertama menampung seluruh nominal bayar dan add-on
-                if (formData.get('tipe_bayar') === "DP") {
-                    dpValue = formData.get('nominal');
+            // 2. Hitung Bobot Rasio Unit ini terhadap akumulasi harga asli seluruh unit
+            const ratio = unitOriginalPrice / calculatedGrandTotal;
+
+            // 3. Tentukan Harga Baru (Proporsional) & Alokasi Pembayaran
+            let unitNewPrice = 0;
+            let unitDp = 0;
+            let unitBayar = 0;
+
+            if (i === selectedUnits.length - 1) {
+                // Unit terakhir mengambil sisa nilai untuk menghindari selisih desimal pembulatan
+                unitNewPrice = finalGrandTotal - runningTotalNewPrice;
+                if (tipeBayar === "DP") {
+                    unitDp = totalNominalPaid - runningTotalDp;
                 } else {
-                    bayarValue = formData.get('nominal');
-                }
-                unitInsurance = totalInsurance;
-                unitSurface = totalSurface;
-                unitHolder = totalHolder;
-
-                if (selectedUnits.length > 1) {
-                    textMarker = ` [Group Booking: Unit 1/${selectedUnits.length}]`;
+                    unitBayar = totalNominalPaid - runningTotalBayar;
                 }
             } else {
-                // Booking sisa diset ke Rp 0 agar tidak terjadi duplikasi jurnal transaksi kas
-                textMarker = ` [Group Booking: Unit ${i+1}/${selectedUnits.length} - Keuangan dicatat di Unit 1 (${selectedUnits[0].motor.toUpperCase()})]`;
+                unitNewPrice = Math.round(finalGrandTotal * ratio);
+                if (tipeBayar === "DP") {
+                    unitDp = Math.round(totalNominalPaid * (unitNewPrice / finalGrandTotal));
+                    runningTotalDp += unitDp;
+                } else {
+                    unitBayar = Math.round(totalNominalPaid * (unitNewPrice / finalGrandTotal));
+                    runningTotalBayar += unitBayar;
+                }
+                runningTotalNewPrice += unitNewPrice;
             }
+
+            // Hitung harga dasar sewa harian baru setelah diskon untuk dicatat di Appsheet
+            // (Harga sewa harian = New price dikurangi addons, dibagi jumlah hari)
+            const unitNewBasePrice = Math.round((unitNewPrice - unitAddons) / jmlHari);
+
+            // Set marker sebagai penanda kelompok order di database
+            const groupMarker = ` [Group Booking ${i + 1}/${selectedUnits.length}]`;
 
             const formatPesanGAS = `Booking
 No Motor: ${currentUnit.motor}
@@ -392,21 +404,21 @@ IG: ${formData.get('ig') || '-'}
 Jml Helm: 2
 Tgl Sewa: ${formatDate(formData.get('mulai'))}
 Tgl Kembali: ${formatDate(formData.get('kembali'))}
-Harga: ${currentUnit.price}
-Byr DP: ${dpValue}
-Jml Byr: ${bayarValue}
+Harga: ${unitNewBasePrice}
+Byr DP: ${unitDp}
+Jml Byr: ${unitBayar}
 Status: Booked
-Insurance: ${unitInsurance}
-Surface: ${unitSurface}
-Phone Holder: ${unitHolder}
+Insurance: ${insChecked ? (50000 * jmlHari) : 0}
+Surface: ${surfChecked ? 50000 : 0}
+Phone Holder: ${holdChecked ? 15000 : 0}
 Payment: ${formData.get('metode_pembayaran')}
-Alamat Jemput: ${formData.get('jemput')}${textMarker}
+Alamat Jemput: ${formData.get('jemput')}${groupMarker}
 Alamat Antar: ${formData.get('antar')}`;
 
             try {
                 const response = await fetch(WEBHOOK_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' }, // Gunakan text/plain untuk bypass CORS preflight di GAS
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ 
                         token: activationToken,
                         message: formatPesanGAS, 
@@ -423,12 +435,11 @@ Alamat Antar: ${formData.get('antar')}`;
             }
         }
 
-        // Selesai Looping
         if (successCounter === selectedUnits.length) {
-            alert(`✅ Berhasil!\nSeluruh unit (${successCounter}/${selectedUnits.length}) berhasil terdaftar di database AppSheet.`);
+            alert(`✅ Berhasil!\nSeluruh unit (${successCounter}/${selectedUnits.length}) berhasil terdaftar secara proporsional.`);
             window.location.href = "index.html";
         } else if (successCounter > 0) {
-            alert(`⚠️ Berhasil Sebagian:\nHanya ${successCounter} dari ${selectedUnits.length} unit yang berhasil dikirimkan. Silakan periksa dashboard admin.`);
+            alert(`⚠️ Berhasil Sebagian:\nHanya ${successCounter} dari ${selectedUnits.length} unit yang berhasil dikirimkan.`);
         } else {
             alert("❌ Terjadi kesalahan saat memproses booking. Coba beberapa saat lagi.");
         }
