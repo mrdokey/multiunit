@@ -27,6 +27,28 @@
         .addon-box:hover { border-color: #fd7e14; background: #fff; }
         .selected-item-pill { background: #e9ecef; border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; font-weight: 600; color: #495057; display: inline-flex; align-items: center; gap: 8px; margin: 4px; }
         .editable-total { font-size: 1.5rem; font-weight: bold; color: #198754; border: 2px dashed #198754; background: #fff; text-align: right; padding: 5px 15px; border-radius: 10px; width: 220px; }
+        
+        /* Styling untuk input kuantitas yang lebih rapi */
+        .quantity-input-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid #dfe6e9;
+        }
+        .quantity-input-group .form-label { margin-bottom: 0; }
+        .quantity-input-group .btn-qty { 
+            width: 35px; height: 35px; border-radius: 50%; border: none; 
+            background: #2d3436; color: white; font-weight: bold; 
+            display: flex; align-items: center; justify-content: center; 
+            transition: 0.2s; font-size: 1.1rem; cursor: pointer;
+        }
+        .quantity-input-group .btn-qty:hover { background: #000; }
+        .quantity-input-group .btn-qty:disabled { background: #ced4da; cursor: not-allowed; }
+        .quantity-input-group .qty-value { font-size: 1.2rem; font-weight: bold; color: #343a40; min-width: 30px; text-align: center;}
     </style>
 </head>
 <body>
@@ -53,7 +75,8 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Email Address</label>
-                    <input type="email" name="email" placeholder="john@example.com" required class="form-control">
+                    <!-- Email dibuat opsional -->
+                    <input type="email" name="email" placeholder="john@example.com (Optional)" class="form-control">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Instagram (Optional)</label>
@@ -74,39 +97,8 @@
                 </div>
             </div>
 
-            <!-- 3. ADD-ONS -->
-            <div id="addonSection" style="display: none;">
-                <div class="section-title"><i class="fas fa-plus-circle"></i> Add-ons & Services</div>
-                <div class="row g-3 mb-5">
-                    <div class="col-md-4">
-                        <div class="addon-box d-flex align-items-center">
-                            <input class="form-check-input me-3" type="checkbox" id="chkInsurance" name="opt_insurance" style="transform: scale(1.3);">
-                            <div>
-                                <label class="form-label mb-0" style="cursor:pointer;" for="chkInsurance">Motor Insurance</label>
-                                <small class="text-muted d-block" style="font-size: 0.7rem;">+Rp 50.000 / Day</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="addon-box d-flex align-items-center">
-                            <input class="form-check-input me-3" type="checkbox" id="chkSurface" name="opt_surface" style="transform: scale(1.3);">
-                            <div>
-                                <label class="form-label mb-0" style="cursor:pointer;" for="chkSurface">Surface / Cleaning</label>
-                                <small class="text-muted d-block" style="font-size: 0.7rem;">+Rp 50.000 / Rent</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="addon-box d-flex align-items-center">
-                            <input class="form-check-input me-3" type="checkbox" id="chkHolder" name="opt_holder" style="transform: scale(1.3);">
-                            <div>
-                                <label class="form-label mb-0" style="cursor:pointer;" for="chkHolder">Phone Holder</label>
-                                <small class="text-muted d-block" style="font-size: 0.7rem;">+Rp 15.000 / Rent</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- 3. ADD-ONS & LAYANAN TAMBAHAN (DINAMIS SESUAI SKEMA KLIEN) -->
+            <div id="dynamicFormSections"></div>
 
             <!-- 4. Payment Information -->
             <div class="section-title"><i class="fas fa-credit-card"></i> Payment Information</div>
@@ -128,6 +120,8 @@
                         <option value="Cash">Cash</option>
                         <option value="QRIS">QRIS</option>
                         <option value="Card">Card</option>
+                        <option value="Transfer BCA">Transfer BCA</option>
+                        <option value="Transfer MANDIRI">Transfer MANDIRI</option>
                         <option value="Transfer BRI">Transfer BRI</option>
                         <option value="Transfer BNI">Transfer BNI</option>
                     </select>
@@ -147,7 +141,7 @@
                 </div>
             </div>
 
-            <!-- 6. LIVE PRICE SUMMARY (DENGAN TOTAL HARGA DINAMIS YANG BISA DI-EDIT) -->
+            <!-- 6. GRAND TOTAL SUMMARY (WITH EDITABLE TOTAL) -->
             <div class="section-title"><i class="fas fa-receipt"></i> Price Details</div>
             <div class="bg-light p-4 rounded-3 border mb-4">
                 <div class="d-flex justify-content-between mb-2">
@@ -158,22 +152,30 @@
                     <span class="text-muted">Base Rental Fee (All Selected Units):</span>
                     <span class="fw-bold text-dark" id="lblBase">IDR 0</span>
                 </div>
-                <div class="justify-content-between mb-2 text-danger" id="rowInsurance" style="display: none !important;">
+                <!-- Rows Add-ons (akan ditampilkan dinamis jika ada) -->
+                <div class="justify-content-between mb-2 text-danger" id="rowInsurance" style="display: none;">
                     <span><i class="fas fa-shield-alt me-1"></i> Motor Insurance (per Unit):</span>
                     <span class="fw-bold" id="lblInsurance">+IDR 0</span>
                 </div>
-                <div class="justify-content-between mb-2 text-danger" id="rowSurface" style="display: none !important;">
+                <div class="justify-content-between mb-2 text-danger" id="rowSurface" style="display: none;">
                     <span><i class="fas fa-soap me-1"></i> Surface / Cleaning Fee (per Unit):</span>
                     <span class="fw-bold" id="lblSurface">+IDR 0</span>
                 </div>
-                <div class="justify-content-between mb-2 text-danger" id="rowHolder" style="display: none !important;">
+                 <div class="justify-content-between mb-2 text-danger" id="rowHolder" style="display: none;">
                     <span><i class="fas fa-mobile-alt me-1"></i> Phone Holder Accessories (per Unit):</span>
                     <span class="fw-bold" id="lblHolder">+IDR 0</span>
+                </div>
+                 <div class="justify-content-between mb-2 text-danger" id="rowDelivery" style="display: none;">
+                    <span><i class="fas fa-truck me-1"></i> Delivery Fee:</span>
+                    <span class="fw-bold" id="lblDelivery">+IDR 0</span>
+                </div>
+                 <div class="justify-content-between mb-2 text-danger" id="rowAdditional" style="display: none;">
+                    <span><i class="fas fa-plus-circle me-1"></i> Additional Service Fee:</span>
+                    <span class="fw-bold" id="lblAdditional">+IDR 0</span>
                 </div>
                 <hr class="my-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-dark fs-5">Grand Total (Editable):</span>
-                    <!-- Input Editable untuk Custom Harga -->
                     <div class="d-flex align-items-center gap-2">
                         <span class="fw-bold text-success fs-4">IDR</span>
                         <input type="number" id="inputGrandTotal" class="editable-total" value="0">
@@ -192,20 +194,35 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec";
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec"; // Ganti dengan URL GAS Master Registry Anda
 
     let selectedUnits = [];
     let activationToken = "";
-    let calculatedGrandTotal = 0; // Menyimpan nilai kalkulasi asli sistem
+    let calculatedGrandTotal = 0; 
     let userHasEditedTotal = false;
 
+    // Data kolom yang akan dicari secara dinamis dari AppSheet Klien
+    const kolomYangDicari = {
+        jmlHelm: "jml helm",
+        insurance: "insurance",
+        deliveryFee: "delivery",
+        additionalFee: "additional",
+        phoneHolder: "phone holder",
+        surface: "surface"
+    };
+
+    // Fetch data dan inisialisasi komponen UI
     window.onload = () => {
         const params = new URLSearchParams(window.location.search);
         activationToken = params.get('token') || 'mrd';
 
+        // Tampilkan Add-ons section jika tokennya 'karbit' atau ada parameter bypass
         const showAddons = (activationToken.toLowerCase() === "karbit") || (params.get('addons') === "true");
         if (showAddons) {
+            // Panggil fungsi untuk membuat form Add-ons secara dinamis
+            buatFormAddonsDinamis();
             document.getElementById('addonSection').style.display = 'block';
         }
 
@@ -242,7 +259,6 @@
                     </div>
                 `;
             });
-
             document.getElementById('unitSummaryContainer').innerHTML = containerHtml;
             document.getElementById('unitDisplay').innerText = `${selectedUnits.length} Unit(s) Selected`;
 
@@ -252,6 +268,148 @@
             hitungTotal();
         }
     };
+
+    // Fungsi untuk membuat grup form secara dinamis
+    function buatFormAddonsDinamis() {
+        const dynamicFormContainer = document.getElementById('dynamicFormSections');
+        
+        // 1. Jml Helm
+        tambahkanFormGroup(dynamicFormContainer, {
+            id: 'jmlHelm',
+            label: 'Number of Helmets',
+            name: 'jml helm',
+            type: 'number',
+            placeholder: 'e.g. 2',
+            value: '2', // Default value
+            colSpan: 'col-md-4',
+            icon: 'fas fa-headset',
+            required: false,
+            minValue: 0
+        });
+
+        // 2. Insurance (Checkbox, hanya jika ada di skema klien)
+        cekDanTambahkanCheckbox(dynamicFormContainer, 'insurance', 'Motor Insurance', '+Rp 50.000 / Day', '2');
+
+        // 3. Surface (Checkbox, hanya jika ada di skema klien)
+        cekDanTambahkanCheckbox(dynamicFormContainer, 'surface', 'Surface / Cleaning', '+Rp 50.000 / Rent', '1');
+
+        // 4. Phone Holder (Checkbox, hanya jika ada di skema klien)
+        cekDanTambahkanCheckbox(dynamicFormContainer, 'phone holder', 'Phone Holder', '+Rp 15.000 / Rent', '1');
+        
+        // 5. Delivery Fee (Input Angka, hanya jika ada di skema klien)
+        tambahkanFormGroup(dynamicFormContainer, {
+            id: 'deliveryFee',
+            label: 'Delivery Fee',
+            name: 'delivery',
+            type: 'number',
+            placeholder: 'e.g. 50000',
+            value: '0',
+            colSpan: 'col-md-6',
+            icon: 'fas fa-truck',
+            required: false,
+            minValue: 0
+        }, 'col-md-12'); // Gunakan satu kolom penuh
+
+        // 6. Additional Service Fee (Input Angka, hanya jika ada di skema klien)
+        tambahkanFormGroup(dynamicFormContainer, {
+            id: 'additionalFee',
+            label: 'Additional Service Fee',
+            name: 'additional',
+            type: 'number',
+            placeholder: 'e.g. 25000',
+            value: '0',
+            colSpan: 'col-md-6',
+            icon: 'fas fa-plus-circle',
+            required: false,
+            minValue: 0
+        }, 'col-md-12'); // Gunakan satu kolom penuh
+    }
+
+    // Fungsi pembantu untuk membuat grup form input
+    function tambahkanFormGroup(container, config, containerClass = 'col-md-4') {
+        // Cek apakah kolom ini ada di AppSheet klien
+        const kolomExist = cekKolomDiAppSheet(config.name);
+        
+        if (kolomExist || config.id === 'jmlHelm' || config.id === 'insurance' || config.id === 'surface' || config.id === 'phone holder' || config.id === 'deliveryFee' || config.id === 'additionalFee') {
+            const html = `
+                <div class="${containerClass} mb-3">
+                    <div class="addon-box d-flex align-items-center justify-content-between">
+                        ${config.type === 'checkbox' ? 
+                            `<input class="form-check-input me-3" type="checkbox" id="${config.id}" name="${config.name}" style="transform: scale(1.3);" ${config.checked ? 'checked' : ''}>` : 
+                            `<label class="form-label mb-0" style="cursor:pointer;" for="${config.id}">${config.label}</label>`
+                        }
+                        ${config.type === 'checkbox' ? 
+                            `<div>
+                                <label class="form-label mb-0" style="cursor:pointer;" for="${config.id}">${config.label}</label>
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">${config.info || ''}</small>
+                            </div>` :
+                            `<div class="d-flex align-items-center gap-2 w-50">
+                                <span class="text-muted flex-shrink-0">${config.icon ? `<i class="${config.icon} me-1"></i>` : ''}</span>
+                                <input type="${config.type}" name="${config.name}" id="${config.id}" placeholder="${config.placeholder || ''}" class="form-control" value="${config.value || ''}" ${config.required ? 'required' : ''} min="${config.minValue || ''}" ${config.type === 'number' ? 'step="1000"' : ''}>
+                             </div>`
+                        }
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+
+            // Tambahkan event listener jika itu checkbox
+            if (config.type === 'checkbox') {
+                document.getElementById(config.id).addEventListener('change', hitungTotal);
+            } else if (config.type === 'number') {
+                 document.getElementById(config.id).addEventListener('input', hitungTotal);
+            }
+        }
+    }
+
+    // Fungsi pembantu untuk checkbox add-on
+    function cekDanTambahkanCheckbox(container, columnName, label, info, colSpanCols) {
+        const kolomExist = cekKolomDiAppSheet(columnName);
+        if (kolomExist) {
+            tambahkanFormGroup(container, {
+                id: columnName.replace(/\s+/g, ''), // Hapus spasi untuk ID elemen
+                label: label,
+                name: columnName,
+                type: 'checkbox',
+                info: info,
+                colSpan: `col-md-${colSpanCols}`
+            });
+        }
+    }
+
+    // Fungsi untuk memeriksa keberadaan kolom di skema AppSheet (memerlukan data yang sudah di-fetch)
+    function cekKolomDiAppSheet(columnName) {
+        // Asumsikan kita cek di tabel 'Item' sebagai referensi utama
+        if (window.allAppSheetColumns && window.allAppSheetColumns[tenant.tabelUnit]) {
+            const kolomTarget = columnName.toLowerCase().trim();
+            return window.allAppSheetColumns[tenant.tabelUnit].some(col => col.toLowerCase().trim() === kolomTarget);
+        }
+        // Default true jika data belum siap atau tenant tidak valid
+        return true; 
+    }
+    
+    // Update setelah hitungTotal() dipanggil pertama kali
+    function updateAddonRowsVisibility() {
+        const totalUnits = selectedUnits.length;
+        const jmlHari = parseInt(document.getElementById('lblDurasi').innerText) || 1; // Ambil jumlah hari dari label
+
+        const insChecked = document.getElementById('chkInsurance') ? document.getElementById('chkInsurance').checked : false;
+        const surfChecked = document.getElementById('chkSurface') ? document.getElementById('chkSurface').checked : false;
+        const holdChecked = document.getElementById('chkHolder') ? document.getElementById('chkHolder').checked : false;
+        const deliveryFee = parseInt(document.getElementById('deliveryFee') ? document.getElementById('deliveryFee').value : '0') || 0;
+        const additionalFee = parseInt(document.getElementById('additionalFee') ? document.getElementById('additionalFee').value : '0') || 0;
+
+        document.getElementById('rowInsurance').style.display = insChecked ? 'flex' : 'none';
+        document.getElementById('rowSurface').style.display = surfChecked ? 'flex' : 'none';
+        document.getElementById('rowHolder').style.display = holdChecked ? 'flex' : 'none';
+        
+        document.getElementById('rowDelivery').style.display = deliveryFee > 0 ? 'flex' : 'none';
+        document.getElementById('lblDelivery').innerText = `+IDR ${deliveryFee.toLocaleString('id-ID')}`;
+
+        document.getElementById('rowAdditional').style.display = additionalFee > 0 ? 'flex' : 'none';
+        document.getElementById('lblAdditional').innerText = `+IDR ${additionalFee.toLocaleString('id-ID')}`;
+    }
+
 
     function hitungTotal() {
         const tglMulaiVal = document.getElementById('inputMulai').value;
@@ -271,55 +429,50 @@
         const baseRental = selectedUnits.reduce((sum, item) => sum + (item.price * jmlHari), 0);
 
         const totalUnits = selectedUnits.length;
-        const chkIns = document.getElementById('chkInsurance');
-        const chkSurf = document.getElementById('chkSurface');
-        const chkHold = document.getElementById('chkHolder');
+        
+        // Ambil nilai add-ons dari input masing-masing (jika ada)
+        const insChecked = document.getElementById('chkInsurance') ? document.getElementById('chkInsurance').checked : false;
+        const surfChecked = document.getElementById('chkSurface') ? document.getElementById('chkSurface').checked : false;
+        const holdChecked = document.getElementById('chkHolder') ? document.getElementById('chkHolder').checked : false;
+        const deliveryFeeVal = parseInt(document.getElementById('deliveryFee') ? document.getElementById('deliveryFee').value : '0') || 0;
+        const additionalFeeVal = parseInt(document.getElementById('additionalFee') ? document.getElementById('additionalFee').value : '0') || 0;
 
-        const insChecked = chkIns ? chkIns.checked : false;
-        const surfChecked = chkSurf ? chkSurf.checked : false;
-        const holdChecked = chkHold ? chkHold.checked : false;
-
+        // Perhitungan Add-ons di sini dikenakan per unit, kecuali Delivery dan Additional Services
         const valInsurance = insChecked ? (50000 * jmlHari * totalUnits) : 0;
         const valSurface = surfChecked ? (50000 * totalUnits) : 0;
         const valHolder = holdChecked ? (15000 * totalUnits) : 0;
 
-        calculatedGrandTotal = baseRental + valInsurance + valSurface + valHolder;
+        // Total biaya tambahan (di luar Base Rental)
+        const totalAddons = valInsurance + valSurface + valHolder + deliveryFeeVal + additionalFeeVal;
 
-        // Render Ringkasan UI
-        if (chkIns) {
-            document.getElementById('rowInsurance').style.setProperty('display', insChecked ? 'flex' : 'none', 'important');
-            document.getElementById('lblInsurance').innerText = `+IDR ${valInsurance.toLocaleString('id-ID')}`;
-        }
-        if (chkSurf) {
-            document.getElementById('rowSurface').style.setProperty('display', surfChecked ? 'flex' : 'none', 'important');
-            document.getElementById('lblSurface').innerText = `+IDR ${valSurface.toLocaleString('id-ID')}`;
-        }
-        if (chkHold) {
-            document.getElementById('rowHolder').style.setProperty('display', holdChecked ? 'flex' : 'none', 'important');
-            document.getElementById('lblHolder').innerText = `+IDR ${valHolder.toLocaleString('id-ID')}`;
-        }
+        calculatedGrandTotal = baseRental + totalAddons;
 
+        // Update UI Label
         document.getElementById('lblDurasi').innerText = `${jmlHari} Day(s) (${totalUnits} Unit)`;
         document.getElementById('lblBase').innerText = `IDR ${baseRental.toLocaleString('id-ID')}`;
-        
-        // Update input Grand Total hanya jika pengguna belum pernah mengeditnya secara manual
+        document.getElementById('lblInsurance').innerText = `+IDR ${valInsurance.toLocaleString('id-ID')}`;
+        document.getElementById('lblSurface').innerText = `+IDR ${valSurface.toLocaleString('id-ID')}`;
+        document.getElementById('lblHolder').innerText = `+IDR ${valHolder.toLocaleString('id-ID')}`;
+
+        // Perbarui nilai input Grand Total hanya jika pengguna belum mengeditnya secara manual
         if (!userHasEditedTotal) {
             document.getElementById('inputGrandTotal').value = calculatedGrandTotal;
         }
+        
+        // Update visibilitas baris add-on
+        updateAddonRowsVisibility();
     }
 
-    // Deteksi interaksi manual pengguna pada input Grand Total
-    document.getElementById('inputGrandTotal').addEventListener('input', () => {
-        userHasEditedTotal = true;
-    });
-
+    // Listener untuk input & checkbox agar total diperbarui secara real-time
     document.getElementById('inputMulai').addEventListener('change', hitungTotal);
     document.getElementById('inputKembali').addEventListener('change', hitungTotal);
-    if (document.getElementById('chkInsurance')) document.getElementById('chkInsurance').addEventListener('change', hitungTotal);
-    if (document.getElementById('chkSurface')) document.getElementById('chkSurface').addEventListener('change', hitungTotal);
-    if (document.getElementById('chkHolder')) document.getElementById('chkHolder').addEventListener('change', hitungTotal);
+    document.getElementById('inputGrandTotal').addEventListener('input', () => { userHasEditedTotal = true; });
 
-    // SUBMIT FORM DENGAN METODE PROPORSIONAL SPLITTING
+    // Attach listeners dynamically after form elements are created
+    // (This part might need adjustment based on actual DOM creation flow)
+    // For now, assuming elements are available after window.onload or createFormAddonsDinamis
+
+    // SUBMIT FORM DENGAN METODE PROPORSIONAL SPLITTING (LOGIKA SAMA)
     document.getElementById('bookingForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmit');
@@ -332,7 +485,7 @@
 
         const finalGrandTotal = parseInt(document.getElementById('inputGrandTotal').value) || calculatedGrandTotal;
         const totalNominalPaid = parseInt(formData.get('nominal')) || 0;
-        const tipeBayar = formData.get('tipe_bayar'); // "DP" atau "FULL"
+        const tipeBayar = formData.get('tipe_bayar');
 
         btn.disabled = true;
         
@@ -341,10 +494,12 @@
         const selisihWaktu = Math.abs(dKembali - dMulai);
         const jmlHari = Math.ceil(selisihWaktu / (1000 * 60 * 60 * 24)) || 1;
 
-        // Ambil status asuransi per unit
+        // Ambil status add-ons & biaya tambahan dari input
         const insChecked = document.getElementById('chkInsurance') ? document.getElementById('chkInsurance').checked : false;
         const surfChecked = document.getElementById('chkSurface') ? document.getElementById('chkSurface').checked : false;
         const holdChecked = document.getElementById('chkHolder') ? document.getElementById('chkHolder').checked : false;
+        const deliveryFeeVal = parseInt(document.getElementById('deliveryFee') ? document.getElementById('deliveryFee').value : '0') || 0;
+        const additionalFeeVal = parseInt(document.getElementById('additionalFee') ? document.getElementById('additionalFee').value : '0') || 0;
 
         let successCounter = 0;
         let runningTotalNewPrice = 0;
@@ -356,20 +511,22 @@
             const currentUnit = selectedUnits[i];
             btn.innerText = `PROCESSING UNIT ${i + 1} OF ${selectedUnits.length}...`;
 
-            // 1. Hitung Harga Asli Unit ini sebelum diskon (termasuk Add-on miliknya)
+            // 1. Hitung Harga Asli Unit ini termasuk Add-onsnya (sebelum diskon)
             const unitAddons = (insChecked ? (50000 * jmlHari) : 0) + (surfChecked ? 50000 : 0) + (holdChecked ? 15000 : 0);
             const unitOriginalPrice = (currentUnit.price * jmlHari) + unitAddons;
 
-            // 2. Hitung Bobot Rasio Unit ini terhadap akumulasi harga asli seluruh unit
-            const ratio = unitOriginalPrice / calculatedGrandTotal;
+            // 2. Hitung Rasio Bobot Unit ini terhadap Grand Total Asli
+            const ratio = calculatedGrandTotal > 0 ? unitOriginalPrice / calculatedGrandTotal : 0;
 
-            // 3. Tentukan Harga Baru (Proporsional) & Alokasi Pembayaran
+            // 3. Tentukan Harga Baru & Alokasi Pembayaran Proporsional
             let unitNewPrice = 0;
             let unitDp = 0;
             let unitBayar = 0;
+            let unitInsuranceVal = 0;
+            let unitSurfaceVal = 0;
+            let unitHolderVal = 0;
 
-            if (i === selectedUnits.length - 1) {
-                // Unit terakhir mengambil sisa nilai untuk menghindari selisih desimal pembulatan
+            if (i === selectedUnits.length - 1) { // Unit terakhir, ambil sisa nilai
                 unitNewPrice = finalGrandTotal - runningTotalNewPrice;
                 if (tipeBayar === "DP") {
                     unitDp = totalNominalPaid - runningTotalDp;
@@ -388,11 +545,19 @@
                 runningTotalNewPrice += unitNewPrice;
             }
 
-            // Hitung harga dasar sewa harian baru setelah diskon untuk dicatat di Appsheet
-            // (Harga sewa harian = New price dikurangi addons, dibagi jumlah hari)
-            const unitNewBasePrice = Math.round((unitNewPrice - unitAddons) / jmlHari);
+            // Alokasi biaya add-ons proporsional jika ada
+            if (insChecked) unitInsuranceVal = Math.round((50000 * jmlHari) * ratio);
+            if (surfChecked) unitSurfaceVal = Math.round(50000 * ratio);
+            if (holdChecked) unitHolderVal = Math.round(15000 * ratio);
+            // Biaya Delivery & Additional Services dibagikan ke unit terakhir saja agar presisi
+            if (i === selectedUnits.length - 1) {
+                 unitDp += Math.max(0, totalNominalPaid - runningTotalDp); // Adjust DP for the last unit
+                 unitBayar += Math.max(0, totalNominalPaid - runningTotalBayar); // Adjust Bayar for the last unit
+            }
+            
+            // Hitung harga dasar sewa harian baru untuk dicatat di Appsheet
+            const unitNewBasePrice = Math.round((unitNewPrice - unitInsuranceVal - unitSurfaceVal - unitHolderVal) / jmlHari);
 
-            // Set marker sebagai penanda kelompok order di database
             const groupMarker = ` [Group Booking ${i + 1}/${selectedUnits.length}]`;
 
             const formatPesanGAS = `Booking
@@ -401,16 +566,18 @@ Nama: ${formData.get('nama')}
 No WA: ${formData.get('wa')}
 Email: ${formData.get('email')}
 IG: ${formData.get('ig') || '-'}
-Jml Helm: 2
+Jml Helm: ${document.getElementById('jmlHelm') ? document.getElementById('jmlHelm').value : '2'}
 Tgl Sewa: ${formatDate(formData.get('mulai'))}
 Tgl Kembali: ${formatDate(formData.get('kembali'))}
 Harga: ${unitNewBasePrice}
 Byr DP: ${unitDp}
 Jml Byr: ${unitBayar}
 Status: Booked
-Insurance: ${insChecked ? (50000 * jmlHari) : 0}
-Surface: ${surfChecked ? 50000 : 0}
-Phone Holder: ${holdChecked ? 15000 : 0}
+Insurance: ${unitInsuranceVal}
+Surface: ${unitSurfaceVal}
+Phone Holder: ${unitHolderVal}
+Delivery Fee: ${deliveryFeeVal > 0 ? Math.round(deliveryFeeVal * ratio) : 0}
+Additional Service: ${additionalFeeVal > 0 ? Math.round(additionalFeeVal * ratio) : 0}
 Payment: ${formData.get('metode_pembayaran')}
 Alamat Jemput: ${formData.get('jemput')}${groupMarker}
 Alamat Antar: ${formData.get('antar')}`;
