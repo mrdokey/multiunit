@@ -28,7 +28,7 @@
         .addon-box:hover { border-color: #fd7e14; background: #fff; }
         .selected-item-pill { background: #e9ecef; border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; font-weight: 600; color: #495057; display: inline-flex; align-items: center; gap: 8px; margin: 4px; }
         
-        /* Modifikasi Input Grand Total agar rapi, proporsional, dan tidak menumpuk */
+        /* Modifikasi susunan Total Harga agar sejajar horizontal */
         .total-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .editable-total-box { display: flex; align-items: center; gap: 10px; background: #fff; border: 2px dashed #198754; padding: 5px 15px; border-radius: 12px; }
         .editable-total-box span { font-size: 1.3rem; font-weight: 800; color: #198754; }
@@ -59,7 +59,6 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Email Address (Optional)</label>
-                    <!-- Sesuai Permintaan: Email dibuat opsional (tidak wajib) -->
                     <input type="email" name="email" placeholder="john@example.com" class="form-control">
                 </div>
                 <div class="col-md-6">
@@ -79,19 +78,19 @@
                     <label class="form-label">Return Date & Time</label>
                     <input type="datetime-local" name="kembali" id="inputKembali" required class="form-control">
                 </div>
-                <!-- Posisikan Helm sejajar dengan jadwal sewa agar simetris -->
+                <!-- Jml Helm dibuat statis agar PASTI muncul di semua klien -->
                 <div class="col-md-4" id="containerJmlHelm">
                     <label class="form-label">Number of Helmets (Jml Helm)</label>
                     <input type="number" name="jml helm" id="inputJmlHelm" class="form-control" value="2" min="0" required>
                 </div>
             </div>
 
-            <!-- 3. ADD-ONS / LAYANAN TAMBAHAN (DIKONTROL SISTEM DETEKSI DINAMIS) -->
+            <!-- 3. ADD-ONS / LAYANAN TAMBAHAN (DENGAN REKAYASA FORMAT CHECKLIST VS NOMINAL) -->
             <div id="addonSection">
                 <div class="section-title"><i class="fas fa-plus-circle"></i> Add-ons & Services</div>
                 <div class="row g-4 mb-5">
-                    <!-- Insurance -->
-                    <div class="col-md-4" id="containerInsurance">
+                    <!-- Format Checklist 1: Insurance (Karbit Only) -->
+                    <div class="col-md-4" id="containerInsuranceCheckbox" style="display: none;">
                         <div class="addon-box d-flex align-items-center">
                             <input class="form-check-input me-3" type="checkbox" id="chkInsurance" name="opt_insurance" style="transform: scale(1.3);">
                             <div>
@@ -100,8 +99,9 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Phone Holder -->
-                    <div class="col-md-4" id="containerPhoneHolder">
+
+                    <!-- Format Checklist 2: Phone Holder (Karbit, etc.) -->
+                    <div class="col-md-4" id="containerPhoneHolder" style="display: none;">
                         <div class="addon-box d-flex align-items-center">
                             <input class="form-check-input me-3" type="checkbox" id="chkHolder" name="opt_holder" style="transform: scale(1.3);">
                             <div>
@@ -110,8 +110,9 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Surface -->
-                    <div class="col-md-4" id="containerSurface">
+
+                    <!-- Format Checklist 3: Surface (Karbit, etc.) -->
+                    <div class="col-md-4" id="containerSurface" style="display: none;">
                         <div class="addon-box d-flex align-items-center">
                             <input class="form-check-input me-3" type="checkbox" id="chkSurface" name="opt_surface" style="transform: scale(1.3);">
                             <div>
@@ -120,13 +121,22 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Format Nominal Manual: Insurance (Klien 493, etc.) -->
+                    <div class="col-md-4" id="containerInsuranceNumber" style="display: none;">
+                        <label class="form-label">Motor Insurance Fee (Nominal)</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted fw-bold">Rp</span>
+                            <input type="number" name="insurance_nominal" id="inputInsuranceNumber" class="form-control" value="0" min="0">
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- 3.5 BIAYA TAMBAHAN (DILINDUNGI DETEKTOR KOLOM) -->
             <div id="feesSection" class="row g-4 mb-5">
                 <!-- Delivery Fee -->
-                <div class="col-md-6" id="containerDelivery">
+                <div class="col-md-6" id="containerDelivery" style="display: none;">
                     <label class="form-label">Delivery Fee (Biaya Antar-Jemput)</label>
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-bold">Rp</span>
@@ -134,7 +144,7 @@
                     </div>
                 </div>
                 <!-- Additional Fee -->
-                <div class="col-md-6" id="containerAdditional">
+                <div class="col-md-6" id="containerAdditional" style="display: none;">
                     <label class="form-label">Additional Service Fee (Biaya Tambahan)</label>
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-bold">Rp</span>
@@ -195,15 +205,15 @@
                 </div>
                 <!-- Rows Biaya Opsional -->
                 <div class="justify-content-between mb-2 text-danger" id="rowInsurance" style="display: none !important;">
-                    <span><i class="fas fa-shield-alt me-1"></i> Motor Insurance (per Unit):</span>
+                    <span><i class="fas fa-shield-alt me-1"></i> Motor Insurance:</span>
                     <span class="fw-bold" id="lblInsurance">+IDR 0</span>
                 </div>
                 <div class="justify-content-between mb-2 text-danger" id="rowSurface" style="display: none !important;">
-                    <span><i class="fas fa-soap me-1"></i> Surface / Cleaning Fee (per Unit):</span>
+                    <span><i class="fas fa-soap me-1"></i> Surface / Cleaning Fee:</span>
                     <span class="fw-bold" id="lblSurface">+IDR 0</span>
                 </div>
                 <div class="justify-content-between mb-2 text-danger" id="rowHolder" style="display: none !important;">
-                    <span><i class="fas fa-mobile-alt me-1"></i> Phone Holder (per Unit):</span>
+                    <span><i class="fas fa-mobile-alt me-1"></i> Phone Holder:</span>
                     <span class="fw-bold" id="lblHolder">+IDR 0</span>
                 </div>
                 <div class="justify-content-between mb-2 text-danger" id="rowDelivery" style="display: none !important;">
@@ -244,19 +254,24 @@
     let calculatedGrandTotal = 0; 
     let userHasEditedTotal = false;
     
-    // Skema fallback kolom jika browser gagal terhubung ke GAS
-    let clientColumns = [
-        "no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", 
-        "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", 
-        "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "surface", 
-        "phone holder", "delivery", "additional"
-    ];
+    // PEMETAAN JALUR LOKAL (Sangat Aman! Berfungsi jika GAS lama/belum diupdate)
+    const skemaLokalklien = {
+        "karbit": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "surface", "phone holder", "delivery", "additional"],
+        "493": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "delivery"],
+        "mrd": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar"]
+    };
+
+    let clientColumns = [];
 
     window.onload = async () => {
         const params = new URLSearchParams(window.location.search);
         activationToken = params.get('token') || 'mrd';
 
-        // Tarik skema kolom riil dari database klien di GAS secara background
+        // Tentukan skema fallback lokal berdasarkan token klien
+        const tokenBersih = activationToken.toLowerCase().trim();
+        clientColumns = skemaLokalklien[tokenBersih] || skemaLokalklien["mrd"];
+
+        // Lakukan sinkronisasi background jika GAS sudah support 'columns'
         try {
             const schemaUrl = `${WEBHOOK_URL}?token=${activationToken}`;
             const response = await fetch(schemaUrl);
@@ -265,10 +280,10 @@
                 clientColumns = data.columns;
             }
         } catch (err) {
-            console.warn("Gagal sinkronisasi skema dari GAS. Menggunakan skema standar.");
+            console.warn("Gagal sinkronisasi skema dari GAS, menggunakan pemetaan lokal.");
         }
 
-        // Panggil fungsi penyesuaian visibilitas kolom
+        // Panggil penataan visibilitas form
         inisialisasiVisibilitasKolom();
 
         const paramMotor = params.get('motor') || '';
@@ -315,48 +330,45 @@
         }
     };
 
-    /**
-     * 🛠️ DETEKSI KOLOM SECARA REAL-TIME DARI DATA SPREADSHEET KLIEN
-     */
     function hasColumn(columnName) {
         const cleanTarget = columnName.toLowerCase().replace(/\s/g, "").replace(/_/g, "");
         return clientColumns.some(col => col.toLowerCase().replace(/\s/g, "").replace(/_/g, "") === cleanTarget);
     }
 
     /**
-     * 🛠️ TAMPILKAN / SEMBUNYIKAN SEKTOR FORM BERDASARKAN SKEMA AKTIF KLIEN
+     * 🛠️ TAMPILKAN / SEMBUNYIKAN SEKTOR FORM BERDASARKAN SKEMA AKTIF KLIEN (SINKRONISASI TOTAL)
      */
     function inisialisasiVisibilitasKolom() {
-        // Peta elemen pembungkus (div container)
-        const listKolomDinamis = {
-            'jml helm': 'containerJmlHelm',
-            'insurance': 'containerInsurance',
-            'surface': 'containerSurface',
-            'phone holder': 'containerPhoneHolder',
-            'delivery': 'containerDelivery',
-            'additional': 'containerAdditional'
-        };
+        const isKarbit = activationToken.toLowerCase() === "karbit";
 
-        let hasAddons = false;
+        // Helm selalu muncul (kolom standar)
+        document.getElementById('containerJmlHelm').style.setProperty('display', 'block', 'important');
 
-        for (let kolom in listKolomDinamis) {
-            const containerId = listKolomDinamis[kolom];
-            const el = document.getElementById(containerId);
-            
-            if (el) {
-                if (hasColumn(kolom)) {
-                    el.style.setProperty('display', 'block', 'important');
-                    if (['insurance', 'surface', 'phone holder'].includes(kolom)) {
-                        hasAddons = true;
-                    }
-                } else {
-                    el.style.setProperty('display', 'none', 'important');
-                }
+        // Atur Format Input Insurance (Checklist vs Nominal)
+        if (hasColumn("insurance")) {
+            if (isKarbit) {
+                document.getElementById("containerInsuranceCheckbox").style.setProperty('display', 'block', 'important');
+                document.getElementById("containerInsuranceNumber").style.setProperty('display', 'none', 'important');
+            } else {
+                document.getElementById("containerInsuranceCheckbox").style.setProperty('display', 'none', 'important');
+                document.getElementById("containerInsuranceNumber").style.setProperty('display', 'block', 'important');
             }
+        } else {
+            document.getElementById("containerInsuranceCheckbox").style.setProperty('display', 'none', 'important');
+            document.getElementById("containerInsuranceNumber").style.setProperty('display', 'none', 'important');
         }
 
-        // Sembunyikan judul section Add-ons jika klien tidak mempunyai satu pun layanan tambahan tersebut
+        // Atur Visibilitas Phone Holder & Surface
+        document.getElementById('containerPhoneHolder').style.setProperty('display', hasColumn('phone holder') ? 'block' : 'none', 'important');
+        document.getElementById('containerSurface').style.setProperty('display', hasColumn('surface') ? 'block' : 'none', 'important');
+
+        // Atur Sektor Section Addons
+        const hasAddons = hasColumn('insurance') || hasColumn('phone holder') || hasColumn('surface');
         document.getElementById('addonSection').style.display = hasAddons ? 'block' : 'none';
+
+        // Atur Visibilitas Biaya Sektor Delivery & Additional
+        document.getElementById('containerDelivery').style.setProperty('display', hasColumn('delivery') ? 'block' : 'none', 'important');
+        document.getElementById('containerAdditional').style.setProperty('display', hasColumn('additional') ? 'block' : 'none', 'important');
     }
 
     function hitungTotal() {
@@ -377,8 +389,19 @@
         const baseRental = selectedUnits.reduce((sum, item) => sum + (item.price * jmlHari), 0);
         const totalUnits = selectedUnits.length;
 
-        // Ambil nilai dari input yang tampil di layar saja (jika disembunyikan/tidak ada kolom di-set ke 0)
-        const insChecked = document.getElementById('chkInsurance') && hasColumn('insurance') ? document.getElementById('chkInsurance').checked : false;
+        // Ambil Nilai Insurance berdasarkan format Checklist vs Nominal
+        const isKarbit = activationToken.toLowerCase() === "karbit";
+        let valInsurance = 0;
+
+        if (hasColumn("insurance")) {
+            if (isKarbit) {
+                const insChecked = document.getElementById('chkInsurance') ? document.getElementById('chkInsurance').checked : false;
+                valInsurance = insChecked ? (50000 * jmlHari * totalUnits) : 0;
+            } else {
+                valInsurance = parseInt(document.getElementById('inputInsuranceNumber') ? document.getElementById('inputInsuranceNumber').value : '0') || 0;
+            }
+        }
+
         const surfChecked = document.getElementById('chkSurface') && hasColumn('surface') ? document.getElementById('chkSurface').checked : false;
         const holdChecked = document.getElementById('chkHolder') && hasColumn('phone holder') ? document.getElementById('chkHolder').checked : false;
         
@@ -386,7 +409,6 @@
         const additionalFee = (document.getElementById('inputAdditional') && hasColumn('additional')) ? parseInt(document.getElementById('inputAdditional').value) || 0 : 0;
 
         // Kalkulasi biaya tambahan
-        const valInsurance = insChecked ? (50000 * jmlHari * totalUnits) : 0;
         const valSurface = surfChecked ? (50000 * totalUnits) : 0;
         const valHolder = holdChecked ? (15000 * totalUnits) : 0;
 
@@ -396,8 +418,8 @@
         document.getElementById('lblDurasi').innerText = `${jmlHari} Day(s) (${totalUnits} Unit)`;
         document.getElementById('lblBase').innerText = `IDR ${baseRental.toLocaleString('id-ID')}`;
 
-        // Hubungkan baris ringkasan dengan visibilitas di form
-        document.getElementById('rowInsurance').style.setProperty('display', insChecked ? 'flex' : 'none', 'important');
+        // Sinkronisasi Baris Ringkasan Tagihan
+        document.getElementById('rowInsurance').style.setProperty('display', valInsurance > 0 ? 'flex' : 'none', 'important');
         document.getElementById('lblInsurance').innerText = `+IDR ${valInsurance.toLocaleString('id-ID')}`;
 
         document.getElementById('rowSurface').style.setProperty('display', surfChecked ? 'flex' : 'none', 'important');
@@ -417,17 +439,23 @@
         }
     }
 
-    // Pasang listener real-time
-    document.getElementById('inputMulai').addEventListener('change', hitungTotal);
-    document.getElementById('inputKembali').addEventListener('change', hitungTotal);
-    document.getElementById('inputGrandTotal').addEventListener('input', () => { userHasEditedTotal = true; });
-    document.getElementById('chkInsurance').addEventListener('change', hitungTotal);
-    document.getElementById('chkSurface').addEventListener('change', hitungTotal);
-    document.getElementById('chkHolder').addEventListener('change', hitungTotal);
-    document.getElementById('inputDelivery').addEventListener('input', hitungTotal);
-    document.getElementById('inputAdditional').addEventListener('input', hitungTotal);
+    // Pemasangan Listener Aman (Crash-Safe)
+    function safeAddListener(id, event, callback) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(event, callback);
+    }
 
-    // SUBMIT FORM DENGAN METODE PROPORSIONAL SPLITTING
+    safeAddListener('inputMulai', 'change', hitungTotal);
+    safeAddListener('inputKembali', 'change', hitungTotal);
+    safeAddListener('inputGrandTotal', 'input', () => { userHasEditedTotal = true; });
+    safeAddListener('chkInsurance', 'change', hitungTotal);
+    safeAddListener('inputInsuranceNumber', 'input', hitungTotal);
+    safeAddListener('chkSurface', 'change', hitungTotal);
+    safeAddListener('chkHolder', 'change', hitungTotal);
+    safeAddListener('inputDelivery', 'input', hitungTotal);
+    safeAddListener('inputAdditional', 'input', hitungTotal);
+
+    // SUBMIT FORM DENGAN PROPORSIONAL SPLITTING
     document.getElementById('bookingForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnSubmit');
@@ -449,10 +477,22 @@
         const selisihWaktu = Math.abs(dKembali - dMulai);
         const jmlHari = Math.ceil(selisihWaktu / (1000 * 60 * 60 * 24)) || 1;
 
-        // Ambil status add-ons & biaya tambahan
-        const insChecked = document.getElementById('chkInsurance') && hasColumn('insurance') ? document.getElementById('chkInsurance').checked : false;
+        // Distribusi Asuransi berdasarkan model klien
+        const isKarbit = activationToken.toLowerCase() === "karbit";
+        let totalInsurance = 0;
+
+        if (hasColumn("insurance")) {
+            if (isKarbit) {
+                const insChecked = document.getElementById('chkInsurance') ? document.getElementById('chkInsurance').checked : false;
+                totalInsurance = insChecked ? (50000 * jmlHari * selectedUnits.length) : 0;
+            } else {
+                totalInsurance = parseInt(document.getElementById('inputInsuranceNumber') ? document.getElementById('inputInsuranceNumber').value : '0') || 0;
+            }
+        }
+
         const surfChecked = document.getElementById('chkSurface') && hasColumn('surface') ? document.getElementById('chkSurface').checked : false;
         const holdChecked = document.getElementById('chkHolder') && hasColumn('phone holder') ? document.getElementById('chkHolder').checked : false;
+        
         const deliveryFeeVal = (document.getElementById('inputDelivery') && hasColumn('delivery')) ? parseInt(document.getElementById('inputDelivery').value) || 0 : 0;
         const additionalFeeVal = (document.getElementById('inputAdditional') && hasColumn('additional')) ? parseInt(document.getElementById('inputAdditional').value) || 0 : 0;
 
@@ -465,14 +505,19 @@
             const currentUnit = selectedUnits[i];
             btn.innerText = `PROCESSING UNIT ${i + 1} OF ${selectedUnits.length}...`;
 
-            // 1. Hitung Harga Asli Unit ini (termasuk Add-on) sebelum diskon
-            const unitAddons = (insChecked ? (50000 * jmlHari) : 0) + (surfChecked ? 50000 : 0) + (holdChecked ? 15000 : 0);
+            // 1. Hitung porsi asuransi per unit
+            let unitInsuranceRaw = 0;
+            if (hasColumn("insurance")) {
+                unitInsuranceRaw = isKarbit ? (50000 * jmlHari) : Math.round(totalInsurance / selectedUnits.length);
+            }
+
+            const unitAddons = unitInsuranceRaw + (surfChecked ? 50000 : 0) + (holdChecked ? 15000 : 0);
             const unitOriginalPrice = (currentUnit.price * jmlHari) + unitAddons;
 
-            // 2. Hitung Rasio Bobot Unit ini terhadap total kotor awal
+            // 2. Hitung rasio bobot unit
             const ratio = calculatedGrandTotal > 0 ? unitOriginalPrice / calculatedGrandTotal : 0;
 
-            // 3. Distribusi Harga Baru & Nominal Pembayaran Proporsional
+            // 3. Distribusikan harga baru & nominal pembayaran
             let unitNewPrice = 0;
             let unitDp = 0;
             let unitBayar = 0;
@@ -500,13 +545,13 @@
             }
 
             // Distribusikan porsi asuransi dll
-            if (insChecked) unitInsuranceVal = Math.round((50000 * jmlHari) * (unitNewPrice / finalGrandTotal));
+            if (hasColumn("insurance")) {
+                unitInsuranceVal = isKarbit ? Math.round((50000 * jmlHari) * (unitNewPrice / finalGrandTotal)) : Math.round(unitInsuranceRaw * (unitNewPrice / finalGrandTotal));
+            }
             if (surfChecked) unitSurfaceVal = Math.round(50000 * (unitNewPrice / finalGrandTotal));
             if (holdChecked) unitHolderVal = Math.round(15000 * (unitNewPrice / finalGrandTotal));
 
-            // Sisa nilai diletakkan kembali ke harga dasar
             const unitNewBasePrice = Math.round((unitNewPrice - unitInsuranceVal - unitSurfaceVal - unitHolderVal) / jmlHari);
-
             const groupMarker = ` [Group Booking ${i + 1}/${selectedUnits.length}]`;
 
             const formatPesanGAS = `Booking
