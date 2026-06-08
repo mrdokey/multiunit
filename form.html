@@ -51,8 +51,9 @@
             <div class="row g-4 mb-5">
                 <div class="col-md-6">
                     <label class="form-label">Full Name</label>
-                    <!-- Nama diletakkan paling atas agar memicu deteksi database lebih awal -->
-                    <input type="text" name="nama" id="inputNama" placeholder="e.g. John Doe" required class="form-control">
+                    <!-- Ditambahkan list="customerList" untuk fitur Autocomplete Dropdown -->
+                    <input type="text" name="nama" id="inputNama" list="customerList" placeholder="e.g. John Doe" required class="form-control" autocomplete="off">
+                    <datalist id="customerList"></datalist> <!-- Tempat menyimpan list pilihan nama -->
                     <small id="namaStatus" class="form-text text-muted d-block mt-2" style="font-size: 0.75rem; font-weight: 600;"></small>
                 </div>
                 <div class="col-md-6">
@@ -80,7 +81,6 @@
                     <label class="form-label">Return Date & Time</label>
                     <input type="datetime-local" name="kembali" id="inputKembali" required class="form-control">
                 </div>
-                <!-- Jml Helm dibuat statis agar PASTI muncul di semua klien -->
                 <div class="col-md-4" id="containerJmlHelm">
                     <label class="form-label">Number of Helmets (Jml Helm)</label>
                     <input type="number" name="jml helm" id="inputJmlHelm" class="form-control" value="2" min="0" required>
@@ -257,7 +257,7 @@
     let userHasEditedTotal = false;
     let searchTimeout = null;
     
-    // PEMETAAN JALUR LOKAL (Sangat Aman! Berfungsi jika GAS lama/belum diupdate)
+    // PEMETAAN JALUR LOKAL
     const skemaLokalklien = {
         "karbit": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "surface", "phone holder", "delivery", "additional"],
         "493": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "delivery"],
@@ -336,7 +336,7 @@
     }
 
     /**
-     * 🛠 Vin-Vin Solution: TAMPILKAN / SEMBUNYIKAN SEKTOR FORM BERDASARKAN SKEMA AKTIF KLIEN
+     * 🛠️ TAMPILKAN / SEMBUNYIKAN SEKTOR FORM BERDASARKAN SKEMA AKTIF KLIEN
      */
     function inisialisasiVisibilitasKolom() {
         const isKarbit = activationToken.toLowerCase() === "karbit";
@@ -431,45 +431,48 @@
     }
 
     /**
-     * 👥 LOGIKA PENCARIAN & AUTOFILL PROFIL TAMU DARI DATABASE CUSTOMER BERDASARKAN NAMA LENGKAP
+     * 👥 LOGIKA PENCARIAN & AUTOCOMPLETE NATIVE HTML5 BERDASARKAN NAMA LENGKAP
      */
     function debouncedSearchCustomer() {
         clearTimeout(searchTimeout);
         const namaInput = document.getElementById('inputNama');
         const namaStatus = document.getElementById('namaStatus');
+        const dataList = document.getElementById('customerList');
         const namaVal = namaInput.value.trim();
 
-        if (namaVal.length < 3) {
+        if (namaVal.length < 2) { // Picu saat mengetik minimal 2 huruf
             namaStatus.innerHTML = "";
+            dataList.innerHTML = "";
             return;
         }
 
-        namaStatus.innerHTML = `<i class="fas fa-spinner fa-spin text-muted me-1"></i> Checking customer database...`;
+        namaStatus.innerHTML = `<i class="fas fa-spinner fa-spin text-muted me-1"></i> Searching suggestions...`;
 
         searchTimeout = setTimeout(async () => {
             try {
-                // Hantam parameter action dan nama ke Webhook GAS Master
                 const searchUrl = `${WEBHOOK_URL}?token=${activationToken}&action=searchCustomer&nama=${encodeURIComponent(namaVal)}`;
                 const response = await fetch(searchUrl);
                 const data = await response.json();
                 
-                if (data && data.found) {
-                    const cust = data.found;
-                    namaStatus.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i> Welcome back! Profile autofilled.</span>`;
+                dataList.innerHTML = ""; // Bersihkan pilihan lama
+                window.currentSuggestions = data.results || [];
+
+                if (window.currentSuggestions.length > 0) {
+                    namaStatus.innerHTML = `<span class="text-primary fw-bold"><i class="fas fa-users me-1"></i> ${window.currentSuggestions.length} Match(es) found. Select from dropdown below!</span>`;
                     
-                    if (cust.wa) document.getElementById('inputWa').value = cust.wa;
-                    if (cust.email) document.getElementById('inputEmail').value = cust.email;
-                    if (cust.ig && cust.ig !== "-") document.getElementById('inputIg').value = cust.ig;
-                    
-                    hitungTotal();
+                    window.currentSuggestions.forEach(cust => {
+                        const option = document.createElement('option');
+                        option.value = cust.nama; // Nilai nama yang akan tampil di pilihan
+                        dataList.appendChild(option);
+                    });
                 } else {
-                    namaStatus.innerHTML = `<span class="text-muted"><i class="fas fa-user-plus me-1"></i> New customer profile.</span>`;
+                    namaStatus.innerHTML = `<span class="text-muted"><i class="fas fa-user-plus me-1"></i> New customer. Profile will be registered.</span>`;
                 }
             } catch (err) {
                 console.error("Gagal melakukan pencarian customer:", err);
                 namaStatus.innerHTML = "";
             }
-        }, 800); // Penundaan 800ms demi performa kelancaran mengetik
+        }, 600); // Penundaan pencarian 600ms
     }
 
     function safeAddListener(id, event, callback) {
@@ -487,8 +490,24 @@
     safeAddListener('inputDelivery', 'input', hitungTotal);
     safeAddListener('inputAdditional', 'input', hitungTotal);
     
-    // Pasang listener pada input Nama untuk autofill dinamis berbasis Nama
+    // Pasang listener pada input Nama untuk autocomplete dinamis
     safeAddListener('inputNama', 'input', debouncedSearchCustomer);
+
+    // Otomatis isi kolom lain (Autofill) saat tamu memilih nama dari dropdown datalist
+    safeAddListener('inputNama', 'change', () => {
+        const namaInputVal = document.getElementById('inputNama').value.trim();
+        if (window.currentSuggestions && window.currentSuggestions.length > 0) {
+            const cocok = window.currentSuggestions.find(c => c.nama.toLowerCase() === namaInputVal.toLowerCase());
+            if (cocok) {
+                if (cocok.wa) document.getElementById('inputWa').value = cocok.wa;
+                if (cocok.email) document.getElementById('inputEmail').value = cocok.email;
+                if (cocok.ig && cocok.ig !== "-") document.getElementById('inputIg').value = cocok.ig;
+                
+                document.getElementById('namaStatus').innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i> Welcome back, ${cocok.nama}! Profile autofilled.</span>`;
+                hitungTotal();
+            }
+        }
+    });
 
     // SUBMIT FORM DENGAN PROPORSIONAL SPLITTING
     document.getElementById('bookingForm').addEventListener('submit', async (e) => {
