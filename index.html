@@ -5,76 +5,81 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script> 
     <script> 
     // =========================================================================
-// GATEKEEPER: DYNAMIC EXPIRING & ONE-TIME USE LINK
-// =========================================================================
-(function() {
-    const params = new URLSearchParams(window.location.search);
-    const tParam = params.get('t');
-    const clientToken = params.get('token') || 'mrd';
+    // GATEKEEPER: DYNAMIC EXPIRING & ONE-TIME USE LINK (SECURED FROM HEAD CRASH)
+    // =========================================================================
+    (function() {
+        const params = new URLSearchParams(window.location.search);
+        const tParam = params.get('t');
+        const clientToken = params.get('token') || 'mrd';
 
-    // LAYER 1: Blokir jika parameter waktu 't' tidak ditemukan
-    if (!tParam) {
-        document.body.innerHTML = `
-            <div style="text-align:center; padding:50px; font-family:sans-serif; color:#721c24; background-color:#f8d7da; border:1px solid #f5c6cb; border-radius:10px; margin:50px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <h2 style="font-weight:bold; margin-bottom:15px;">Akses Ditolak ❌</h2>
-                <p>Tautan tidak valid. Silakan buka halaman pemesanan resmi langsung dari dalam aplikasi AppSheet Anda.</p>
-            </div>
-        `;
-        throw new Error("Keamanan PWA: Parameter penanda waktu (t) tidak ditemukan.");
-    }
+        // Fungsi pembantu untuk memblokir layar dengan aman sebelum atau sesudah DOM selesai dimuat
+        function blockScreen(title, message, isWarning = false) {
+            const renderBlock = () => {
+                const bgColor = isWarning ? "#fff3cd" : "#f8d7da";
+                const borderColor = isWarning ? "#ffeeba" : "#f5c6cb";
+                const textColor = isWarning ? "#856404" : "#721c24";
+                
+                document.body.innerHTML = `
+                    <div style="text-align:center; padding:50px; font-family:sans-serif; color:${textColor}; background-color:${bgColor}; border:1px solid ${borderColor}; border-radius:10px; margin:50px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                        <h2 style="font-weight:bold; margin-bottom:15px;">${title}</h2>
+                        <p>${message}</p>
+                    </div>
+                `;
+            };
+            if (document.body) {
+                renderBlock();
+            } else {
+                document.addEventListener("DOMContentLoaded", renderBlock);
+            }
+        }
 
-    // Fungsi konversi format YYYYMMDDHHMM ke Objek Tanggal UTC
-    function parseUTCTimestamp(tStr) {
-        if (tStr.length !== 12) return new Date(0); // Format rusak
-        const year = tStr.substring(0, 4);
-        const month = tStr.substring(4, 6);
-        const day = tStr.substring(6, 8);
-        const hour = tStr.substring(8, 10);
-        const minute = tStr.substring(10, 12);
-        
-        // Buat string ISO standar UTC
-        const isoStr = `${year}-${month}-${day}T${hour}:${minute}:00Z`;
-        return new Date(isoStr);
-    }
+        // LAYER 1: Blokir jika parameter waktu 't' tidak ditemukan
+        if (!tParam) {
+            blockScreen("Akses Ditolak ❌", "Tautan tidak valid. Silakan buka halaman pemesanan resmi langsung dari dalam aplikasi AppSheet Anda.");
+            throw new Error("Keamanan PWA: Parameter penanda waktu (t) tidak ditemukan.");
+        }
 
-    // LAYER 2: Validasi Batas Waktu 5 Menit
-    const linkTime = parseUTCTimestamp(tParam);
-    const now = new Date(); // Waktu lokal browser saat ini
-    const diffMinutes = Math.abs(now - linkTime) / (1000 * 60);
+        // Fungsi konversi format YYYYMMDDHHMM ke Objek Tanggal UTC
+        function parseUTCTimestamp(tStr) {
+            if (tStr.length !== 12) return new Date(0); // Format rusak
+            const year = tStr.substring(0, 4);
+            const month = tStr.substring(4, 6);
+            const day = tStr.substring(6, 8);
+            const hour = tStr.substring(8, 10);
+            const minute = tStr.substring(10, 12);
+            
+            const isoStr = `${year}-${month}-${day}T${hour}:${minute}:00Z`;
+            return new Date(isoStr);
+        }
 
-    if (diffMinutes > 5) {
-        document.body.innerHTML = `
-            <div style="text-align:center; padding:50px; font-family:sans-serif; color:#721c24; background-color:#f8d7da; border:1px solid #f5c6cb; border-radius:10px; margin:50px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <h2 style="font-weight:bold; margin-bottom:15px;">Tautan Kedaluwarsa ⏳</h2>
-                <p>Batas waktu akses 5 menit dari AppSheet telah habis demi keamanan transaksi. Silakan buat tautan baru dari aplikasi AppSheet Anda.</p>
-            </div>
-        `;
-        throw new Error("Keamanan PWA: Sesi tautan dinamis telah kedaluwarsa (lebih dari 5 menit).");
-    }
+        // LAYER 2: Validasi Batas Waktu 5 Menit
+        const linkTime = parseUTCTimestamp(tParam);
+        const now = new Date(); 
+        const diffMinutes = Math.abs(now - linkTime) / (1000 * 60);
 
-    // LAYER 3: Validasi Kunci Sekali Buka (Anti-Replay)
-    const storageKey = "used_link_t_" + tParam;
-    const isSameTabSession = sessionStorage.getItem("active_pwa_t") === tParam;
+        if (diffMinutes > 5) {
+            blockScreen("Tautan Kedaluwarsa ⏳", "Batas waktu akses 5 menit dari AppSheet telah habis demi keamanan transaksi. Silakan buat tautan baru dari aplikasi AppSheet Anda.");
+            throw new Error("Keamanan PWA: Sesi tautan dinamis telah kedaluwarsa (lebih dari 5 menit).");
+        }
 
-    if (localStorage.getItem(storageKey) && !isSameTabSession) {
-        document.body.innerHTML = `
-            <div style="text-align:center; padding:50px; font-family:sans-serif; color:#856404; background-color:#fff3cd; border:1px solid #ffeeba; border-radius:10px; margin:50px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <h2 style="font-weight:bold; margin-bottom:15px;">Tautan Sudah Digunakan 🔒</h2>
-                <p>Tautan ini hanya dapat dibuka sekali demi keamanan data. Silakan buka tautan baru dari aplikasi AppSheet Anda.</p>
-            </div>
-        `;
-        throw new Error("Keamanan PWA: Tautan sekali pakai telah digunakan sebelumnya.");
-    }
+        // LAYER 3: Validasi Kunci Sekali Buka Lokal (Anti-Replay)
+        const storageKey = "used_link_t_" + tParam;
+        const isSameTabSession = sessionStorage.getItem("active_pwa_t") === tParam;
 
-    // Daftarkan tanda bahwa tautan ini sudah dipakai di perangkat ini
-    localStorage.setItem(storageKey, "true");
-    // Simpan tanda sesi aktif di tab ini agar aman dari gangguan 'refresh/back' halaman
-    sessionStorage.setItem("active_pwa_t", tParam);
-})();
-      window.dataLayer = window.dataLayer || []; 
-      function gtag(){dataLayer.push(arguments);} 
-      gtag('js', new Date()); 
-      gtag('config', 'G-XXXXXXXXXX'); 
+        if (localStorage.getItem(storageKey) && !isSameTabSession) {
+            blockScreen("Tautan Sudah Digunakan 🔒", "Tautan ini hanya dapat dibuka sekali demi keamanan data. Silakan buka tautan baru dari aplikasi AppSheet Anda.", true);
+            throw new Error("Keamanan PWA: Tautan sekali pakai telah digunakan sebelumnya.");
+        }
+
+        // Daftarkan tanda sesi
+        localStorage.setItem(storageKey, "true");
+        sessionStorage.setItem("active_pwa_t", tParam);
+    })();
+
+    window.dataLayer = window.dataLayer || []; 
+    function gtag(){dataLayer.push(arguments);} 
+    gtag('js', new Date()); 
+    gtag('config', 'G-XXXXXXXXXX'); 
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -180,9 +185,10 @@
 <script>
     const params = new URLSearchParams(window.location.search);
     const clientToken = params.get('token') || 'mrd';
+    const tParam = params.get('t') || ''; // Tarik t dari URL
     
-    // API URL mengarah ke doGet Master Registry
-    const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${clientToken}`;
+    // API URL: Terintegrasi dengan parameter t untuk pengecekan in-memory RAM di GAS Master
+    const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${clientToken}&t=${tParam}`;
 
     let motors = [];
     let bookings = [];
@@ -211,6 +217,23 @@
         try {
             const response = await fetch(API_URL);
             const data = await response.json();
+            
+            // 🔒 CEK SERVER-SIDE EXPIRED / REPLAY DARI INCOGNITO MODE
+            if (data.error && data.expired) {
+                document.getElementById('placeholder').style.display = 'none';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('motorContainer').innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <div style="text-align:center; padding:50px; font-family:sans-serif; color:#721c24; background-color:#f8d7da; border:1px solid #f5c6cb; border-radius:10px; margin:20px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                            <h2 style="font-weight:bold; margin-bottom:15px;">Tautan Kedaluwarsa / Sudah Digunakan 🔒</h2>
+                            <p>Tautan sekali pakai ini telah kedaluwarsa atau sudah pernah dibuka sebelumnya dari penjelajah lain.</p>
+                        </div>
+                    </div>
+                `;
+                isDataLoaded = false;
+                return;
+            }
+
             motors = data.items || [];
             bookings = data.bookings || [];
             isDataLoaded = true;
@@ -219,7 +242,6 @@
         }
     }
 
-    // Pembersihan spasi nomor polisi DK agar pencocokan presisi
     function cleanPlate(plate) {
         return String(plate).trim().replace(/\s/g, '').toLowerCase();
     }
@@ -256,7 +278,6 @@
         motors.forEach(m => {
             const plate = m[0], type = m[1], brand = m[2], price = m[3], customImg = m[4], status = m[5];
             
-            // Filter unit rusak/dalam perbaikan atau sedang tersewa di tanggal pilihan
             const clnStatus = status.toLowerCase();
             if (clnStatus === "bengkel" || clnStatus === "servis" || clnStatus === "rusak" || isOccupied(plate, sDate, eDate)) return;
             
@@ -399,7 +420,8 @@
             brand: finalBrands.join(','),
             type: finalTypes.join(','),
             start: start,
-            end: end
+            end: end,
+            t: tParam // Meneruskan parameter t ke form.html
         });
 
         window.location.href = `form.html?${urlParams.toString()}`;
