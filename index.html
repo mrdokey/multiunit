@@ -4,6 +4,73 @@
     <!-- Google Analytics Snippet -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script> 
     <script> 
+    // =========================================================================
+// GATEKEEPER: DYNAMIC EXPIRING & ONE-TIME USE LINK
+// =========================================================================
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const tParam = params.get('t');
+    const clientToken = params.get('token') || 'mrd';
+
+    // LAYER 1: Blokir jika parameter waktu 't' tidak ditemukan
+    if (!tParam) {
+        document.body.innerHTML = `
+            <div style="text-align:center; padding:50px; font-family:sans-serif; color:#721c24; background-color:#f8d7da; border:1px solid #f5c6cb; border-radius:10px; margin:50px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <h2 style="font-weight:bold; margin-bottom:15px;">Akses Ditolak ❌</h2>
+                <p>Tautan tidak valid. Silakan buka halaman pemesanan resmi langsung dari dalam aplikasi AppSheet Anda.</p>
+            </div>
+        `;
+        throw new Error("Keamanan PWA: Parameter penanda waktu (t) tidak ditemukan.");
+    }
+
+    // Fungsi konversi format YYYYMMDDHHMM ke Objek Tanggal UTC
+    function parseUTCTimestamp(tStr) {
+        if (tStr.length !== 12) return new Date(0); // Format rusak
+        const year = tStr.substring(0, 4);
+        const month = tStr.substring(4, 6);
+        const day = tStr.substring(6, 8);
+        const hour = tStr.substring(8, 10);
+        const minute = tStr.substring(10, 12);
+        
+        // Buat string ISO standar UTC
+        const isoStr = `${year}-${month}-${day}T${hour}:${minute}:00Z`;
+        return new Date(isoStr);
+    }
+
+    // LAYER 2: Validasi Batas Waktu 5 Menit
+    const linkTime = parseUTCTimestamp(tParam);
+    const now = new Date(); // Waktu lokal browser saat ini
+    const diffMinutes = Math.abs(now - linkTime) / (1000 * 60);
+
+    if (diffMinutes > 5) {
+        document.body.innerHTML = `
+            <div style="text-align:center; padding:50px; font-family:sans-serif; color:#721c24; background-color:#f8d7da; border:1px solid #f5c6cb; border-radius:10px; margin:50px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <h2 style="font-weight:bold; margin-bottom:15px;">Tautan Kedaluwarsa ⏳</h2>
+                <p>Batas waktu akses 5 menit dari AppSheet telah habis demi keamanan transaksi. Silakan buat tautan baru dari aplikasi AppSheet Anda.</p>
+            </div>
+        `;
+        throw new Error("Keamanan PWA: Sesi tautan dinamis telah kedaluwarsa (lebih dari 5 menit).");
+    }
+
+    // LAYER 3: Validasi Kunci Sekali Buka (Anti-Replay)
+    const storageKey = "used_link_t_" + tParam;
+    const isSameTabSession = sessionStorage.getItem("active_pwa_t") === tParam;
+
+    if (localStorage.getItem(storageKey) && !isSameTabSession) {
+        document.body.innerHTML = `
+            <div style="text-align:center; padding:50px; font-family:sans-serif; color:#856404; background-color:#fff3cd; border:1px solid #ffeeba; border-radius:10px; margin:50px auto; max-width:500px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <h2 style="font-weight:bold; margin-bottom:15px;">Tautan Sudah Digunakan 🔒</h2>
+                <p>Tautan ini hanya dapat dibuka sekali demi keamanan data. Silakan buka tautan baru dari aplikasi AppSheet Anda.</p>
+            </div>
+        `;
+        throw new Error("Keamanan PWA: Tautan sekali pakai telah digunakan sebelumnya.");
+    }
+
+    // Daftarkan tanda bahwa tautan ini sudah dipakai di perangkat ini
+    localStorage.setItem(storageKey, "true");
+    // Simpan tanda sesi aktif di tab ini agar aman dari gangguan 'refresh/back' halaman
+    sessionStorage.setItem("active_pwa_t", tParam);
+})();
       window.dataLayer = window.dataLayer || []; 
       function gtag(){dataLayer.push(arguments);} 
       gtag('js', new Date()); 
