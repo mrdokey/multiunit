@@ -50,20 +50,22 @@
             <div class="section-title"><i class="fas fa-user-circle"></i> Customer Information</div>
             <div class="row g-4 mb-5">
                 <div class="col-md-6">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" name="nama" placeholder="e.g. John Doe" required class="form-control">
+                    <label class="form-label">WhatsApp Number</label>
+                    <!-- WA ditempatkan di atas agar memicu pencarian database lebih awal -->
+                    <input type="tel" name="wa" id="inputWa" placeholder="e.g. 62812345678" required class="form-control">
+                    <small id="waStatus" class="form-text text-muted d-block mt-2" style="font-size: 0.75rem; font-weight: 600;"></small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">WhatsApp Number</label>
-                    <input type="tel" name="wa" placeholder="e.g. 62812345678" required class="form-control">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="nama" id="inputNama" placeholder="e.g. John Doe" required class="form-control">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Email Address (Optional)</label>
-                    <input type="email" name="email" placeholder="john@example.com" class="form-control">
+                    <input type="email" name="email" id="inputEmail" placeholder="john@example.com" class="form-control">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Instagram (Optional)</label>
-                    <input type="text" name="ig" placeholder="@username" class="form-control">
+                    <input type="text" name="ig" id="inputIg" placeholder="@username" class="form-control">
                 </div>
             </div>
 
@@ -253,6 +255,7 @@
     let activationToken = "";
     let calculatedGrandTotal = 0; 
     let userHasEditedTotal = false;
+    let searchTimeout = null;
     
     // PEMETAAN JALUR LOKAL (Sangat Aman! Berfungsi jika GAS lama/belum diupdate)
     const skemaLokalklien = {
@@ -267,11 +270,9 @@
         const params = new URLSearchParams(window.location.search);
         activationToken = params.get('token') || 'mrd';
 
-        // Tentukan skema fallback lokal berdasarkan token klien
         const tokenBersih = activationToken.toLowerCase().trim();
         clientColumns = skemaLokalklien[tokenBersih] || skemaLokalklien["mrd"];
 
-        // Lakukan sinkronisasi background jika GAS sudah support 'columns'
         try {
             const schemaUrl = `${WEBHOOK_URL}?token=${activationToken}`;
             const response = await fetch(schemaUrl);
@@ -283,7 +284,6 @@
             console.warn("Gagal sinkronisasi skema dari GAS, menggunakan pemetaan lokal.");
         }
 
-        // Panggil penataan visibilitas form
         inisialisasiVisibilitasKolom();
 
         const paramMotor = params.get('motor') || '';
@@ -341,10 +341,8 @@
     function inisialisasiVisibilitasKolom() {
         const isKarbit = activationToken.toLowerCase() === "karbit";
 
-        // Helm selalu muncul (kolom standar)
         document.getElementById('containerJmlHelm').style.setProperty('display', 'block', 'important');
 
-        // Atur Format Input Insurance (Checklist vs Nominal)
         if (hasColumn("insurance")) {
             if (isKarbit) {
                 document.getElementById("containerInsuranceCheckbox").style.setProperty('display', 'block', 'important');
@@ -358,15 +356,12 @@
             document.getElementById("containerInsuranceNumber").style.setProperty('display', 'none', 'important');
         }
 
-        // Atur Visibilitas Phone Holder & Surface
         document.getElementById('containerPhoneHolder').style.setProperty('display', hasColumn('phone holder') ? 'block' : 'none', 'important');
         document.getElementById('containerSurface').style.setProperty('display', hasColumn('surface') ? 'block' : 'none', 'important');
 
-        // Atur Sektor Section Addons
         const hasAddons = hasColumn('insurance') || hasColumn('phone holder') || hasColumn('surface');
         document.getElementById('addonSection').style.display = hasAddons ? 'block' : 'none';
 
-        // Atur Visibilitas Biaya Sektor Delivery & Additional
         document.getElementById('containerDelivery').style.setProperty('display', hasColumn('delivery') ? 'block' : 'none', 'important');
         document.getElementById('containerAdditional').style.setProperty('display', hasColumn('additional') ? 'block' : 'none', 'important');
     }
@@ -389,7 +384,6 @@
         const baseRental = selectedUnits.reduce((sum, item) => sum + (item.price * jmlHari), 0);
         const totalUnits = selectedUnits.length;
 
-        // Ambil Nilai Insurance berdasarkan format Checklist vs Nominal
         const isKarbit = activationToken.toLowerCase() === "karbit";
         let valInsurance = 0;
 
@@ -408,17 +402,14 @@
         const deliveryFee = (document.getElementById('inputDelivery') && hasColumn('delivery')) ? parseInt(document.getElementById('inputDelivery').value) || 0 : 0;
         const additionalFee = (document.getElementById('inputAdditional') && hasColumn('additional')) ? parseInt(document.getElementById('inputAdditional').value) || 0 : 0;
 
-        // Kalkulasi biaya tambahan
         const valSurface = surfChecked ? (50000 * totalUnits) : 0;
         const valHolder = holdChecked ? (15000 * totalUnits) : 0;
 
         calculatedGrandTotal = baseRental + valInsurance + valSurface + valHolder + deliveryFee + additionalFee;
 
-        // Update Text Ringkasan Harga
         document.getElementById('lblDurasi').innerText = `${jmlHari} Day(s) (${totalUnits} Unit)`;
         document.getElementById('lblBase').innerText = `IDR ${baseRental.toLocaleString('id-ID')}`;
 
-        // Sinkronisasi Baris Ringkasan Tagihan
         document.getElementById('rowInsurance').style.setProperty('display', valInsurance > 0 ? 'flex' : 'none', 'important');
         document.getElementById('lblInsurance').innerText = `+IDR ${valInsurance.toLocaleString('id-ID')}`;
 
@@ -439,7 +430,47 @@
         }
     }
 
-    // Pemasangan Listener Aman (Crash-Safe)
+    /**
+     * 👥 LOGIKA PENCARIAN & AUTOFILL PROFIL TAMU DARI DATABASE CUSTOMER (ANTI-REPLAY)
+     */
+    function debouncedSearchCustomer() {
+        clearTimeout(searchTimeout);
+        const waInput = document.getElementById('inputWa');
+        const waStatus = document.getElementById('waStatus');
+        const waVal = waInput.value.replace(/\D/g, '');
+
+        if (waVal.length < 9) {
+            waStatus.innerHTML = "";
+            return;
+        }
+
+        waStatus.innerHTML = `<i class="fas fa-spinner fa-spin text-muted me-1"></i> Checking customer database...`;
+
+        searchTimeout = setTimeout(async () => {
+            try {
+                const searchUrl = `${WEBHOOK_URL}?token=${activationToken}&action=searchCustomer&wa=${waVal}`;
+                const response = await fetch(searchUrl);
+                const data = await response.json();
+                
+                if (data && data.found) {
+                    const cust = data.found;
+                    waStatus.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i> Welcome back, ${cust.nama}! Profile autofilled.</span>`;
+                    
+                    if (cust.nama) document.getElementById('inputNama').value = cust.nama;
+                    if (cust.email) document.getElementById('inputEmail').value = cust.email;
+                    if (cust.ig && cust.ig !== "-") document.getElementById('inputIg').value = cust.ig;
+                    
+                    hitungTotal();
+                } else {
+                    waStatus.innerHTML = `<span class="text-muted"><i class="fas fa-user-plus me-1"></i> New customer. Profile will be registered.</span>`;
+                }
+            } catch (err) {
+                console.error("Gagal melakukan pencarian customer:", err);
+                waStatus.innerHTML = "";
+            }
+        }, 800); // Penundaan 800ms demi performa kelancaran mengetik
+    }
+
     function safeAddListener(id, event, callback) {
         const el = document.getElementById(id);
         if (el) el.addEventListener(event, callback);
@@ -454,6 +485,9 @@
     safeAddListener('chkHolder', 'change', hitungTotal);
     safeAddListener('inputDelivery', 'input', hitungTotal);
     safeAddListener('inputAdditional', 'input', hitungTotal);
+    
+    // Pasang listener pada input WhatsApp untuk autofill dinamis
+    safeAddListener('inputWa', 'input', debouncedSearchCustomer);
 
     // SUBMIT FORM DENGAN PROPORSIONAL SPLITTING
     document.getElementById('bookingForm').addEventListener('submit', async (e) => {
@@ -477,7 +511,6 @@
         const selisihWaktu = Math.abs(dKembali - dMulai);
         const jmlHari = Math.ceil(selisihWaktu / (1000 * 60 * 60 * 24)) || 1;
 
-        // Distribusi Asuransi berdasarkan model klien
         const isKarbit = activationToken.toLowerCase() === "karbit";
         let totalInsurance = 0;
 
@@ -505,7 +538,6 @@
             const currentUnit = selectedUnits[i];
             btn.innerText = `PROCESSING UNIT ${i + 1} OF ${selectedUnits.length}...`;
 
-            // 1. Hitung porsi asuransi per unit
             let unitInsuranceRaw = 0;
             if (hasColumn("insurance")) {
                 unitInsuranceRaw = isKarbit ? (50000 * jmlHari) : Math.round(totalInsurance / selectedUnits.length);
@@ -513,11 +545,8 @@
 
             const unitAddons = unitInsuranceRaw + (surfChecked ? 50000 : 0) + (holdChecked ? 15000 : 0);
             const unitOriginalPrice = (currentUnit.price * jmlHari) + unitAddons;
-
-            // 2. Hitung rasio bobot unit
             const ratio = calculatedGrandTotal > 0 ? unitOriginalPrice / calculatedGrandTotal : 0;
 
-            // 3. Distribusikan harga baru & nominal pembayaran
             let unitNewPrice = 0;
             let unitDp = 0;
             let unitBayar = 0;
@@ -544,7 +573,6 @@
                 runningTotalNewPrice += unitNewPrice;
             }
 
-            // Distribusikan porsi asuransi dll
             if (hasColumn("insurance")) {
                 unitInsuranceVal = isKarbit ? Math.round((50000 * jmlHari) * (unitNewPrice / finalGrandTotal)) : Math.round(unitInsuranceRaw * (unitNewPrice / finalGrandTotal));
             }
