@@ -50,14 +50,14 @@
             <div class="section-title"><i class="fas fa-user-circle"></i> Customer Information</div>
             <div class="row g-4 mb-5">
                 <div class="col-md-6">
-                    <label class="form-label">WhatsApp Number</label>
-                    <!-- WA ditempatkan di atas agar memicu pencarian database lebih awal -->
-                    <input type="tel" name="wa" id="inputWa" placeholder="e.g. 62812345678" required class="form-control">
-                    <small id="waStatus" class="form-text text-muted d-block mt-2" style="font-size: 0.75rem; font-weight: 600;"></small>
+                    <label class="form-label">Full Name</label>
+                    <!-- Nama diletakkan paling atas agar memicu deteksi database lebih awal -->
+                    <input type="text" name="nama" id="inputNama" placeholder="e.g. John Doe" required class="form-control">
+                    <small id="namaStatus" class="form-text text-muted d-block mt-2" style="font-size: 0.75rem; font-weight: 600;"></small>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" name="nama" id="inputNama" placeholder="e.g. John Doe" required class="form-control">
+                    <label class="form-label">WhatsApp Number</label>
+                    <input type="tel" name="wa" id="inputWa" placeholder="e.g. 62812345678" required class="form-control">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Email Address (Optional)</label>
@@ -336,7 +336,7 @@
     }
 
     /**
-     * 🛠️ TAMPILKAN / SEMBUNYIKAN SEKTOR FORM BERDASARKAN SKEMA AKTIF KLIEN (SINKRONISASI TOTAL)
+     * 🛠 Vin-Vin Solution: TAMPILKAN / SEMBUNYIKAN SEKTOR FORM BERDASARKAN SKEMA AKTIF KLIEN
      */
     function inisialisasiVisibilitasKolom() {
         const isKarbit = activationToken.toLowerCase() === "karbit";
@@ -431,42 +431,43 @@
     }
 
     /**
-     * 👥 LOGIKA PENCARIAN & AUTOFILL PROFIL TAMU DARI DATABASE CUSTOMER (ANTI-REPLAY)
+     * 👥 LOGIKA PENCARIAN & AUTOFILL PROFIL TAMU DARI DATABASE CUSTOMER BERDASARKAN NAMA LENGKAP
      */
     function debouncedSearchCustomer() {
         clearTimeout(searchTimeout);
-        const waInput = document.getElementById('inputWa');
-        const waStatus = document.getElementById('waStatus');
-        const waVal = waInput.value.replace(/\D/g, '');
+        const namaInput = document.getElementById('inputNama');
+        const namaStatus = document.getElementById('namaStatus');
+        const namaVal = namaInput.value.trim();
 
-        if (waVal.length < 9) {
-            waStatus.innerHTML = "";
+        if (namaVal.length < 3) {
+            namaStatus.innerHTML = "";
             return;
         }
 
-        waStatus.innerHTML = `<i class="fas fa-spinner fa-spin text-muted me-1"></i> Checking customer database...`;
+        namaStatus.innerHTML = `<i class="fas fa-spinner fa-spin text-muted me-1"></i> Checking customer database...`;
 
         searchTimeout = setTimeout(async () => {
             try {
-                const searchUrl = `${WEBHOOK_URL}?token=${activationToken}&action=searchCustomer&wa=${waVal}`;
+                // Hantam parameter action dan nama ke Webhook GAS Master
+                const searchUrl = `${WEBHOOK_URL}?token=${activationToken}&action=searchCustomer&nama=${encodeURIComponent(namaVal)}`;
                 const response = await fetch(searchUrl);
                 const data = await response.json();
                 
                 if (data && data.found) {
                     const cust = data.found;
-                    waStatus.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i> Welcome back, ${cust.nama}! Profile autofilled.</span>`;
+                    namaStatus.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i> Welcome back! Profile autofilled.</span>`;
                     
-                    if (cust.nama) document.getElementById('inputNama').value = cust.nama;
+                    if (cust.wa) document.getElementById('inputWa').value = cust.wa;
                     if (cust.email) document.getElementById('inputEmail').value = cust.email;
                     if (cust.ig && cust.ig !== "-") document.getElementById('inputIg').value = cust.ig;
                     
                     hitungTotal();
                 } else {
-                    waStatus.innerHTML = `<span class="text-muted"><i class="fas fa-user-plus me-1"></i> New customer. Profile will be registered.</span>`;
+                    namaStatus.innerHTML = `<span class="text-muted"><i class="fas fa-user-plus me-1"></i> New customer profile.</span>`;
                 }
             } catch (err) {
                 console.error("Gagal melakukan pencarian customer:", err);
-                waStatus.innerHTML = "";
+                namaStatus.innerHTML = "";
             }
         }, 800); // Penundaan 800ms demi performa kelancaran mengetik
     }
@@ -486,8 +487,8 @@
     safeAddListener('inputDelivery', 'input', hitungTotal);
     safeAddListener('inputAdditional', 'input', hitungTotal);
     
-    // Pasang listener pada input WhatsApp untuk autofill dinamis
-    safeAddListener('inputWa', 'input', debouncedSearchCustomer);
+    // Pasang listener pada input Nama untuk autofill dinamis berbasis Nama
+    safeAddListener('inputNama', 'input', debouncedSearchCustomer);
 
     // SUBMIT FORM DENGAN PROPORSIONAL SPLITTING
     document.getElementById('bookingForm').addEventListener('submit', async (e) => {
