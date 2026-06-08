@@ -557,9 +557,18 @@
         let runningTotalDp = 0;
         let runningTotalBayar = 0;
 
+        // Alokasi Sisa Bulat Helm (Integer Remainder)
+        const totalHelmets = parseInt(document.getElementById('inputJmlHelm').value) || 0;
+        const totalUnits = selectedUnits.length;
+
         for (let i = 0; i < selectedUnits.length; i++) {
             const currentUnit = selectedUnits[i];
             btn.innerText = `PROCESSING UNIT ${i + 1} OF ${selectedUnits.length}...`;
+
+            // 🪖 ALGORITMA DISTRIBUSI SISA BULAT HELM (INTEGER REMAINDER)
+            const baseHelmets = Math.floor(totalHelmets / totalUnits);
+            const remainderHelmets = totalHelmets % totalUnits;
+            const unitHelmets = baseHelmets + (i < remainderHelmets ? 1 : 0);
 
             let unitInsuranceRaw = 0;
             if (hasColumn("insurance")) {
@@ -611,7 +620,7 @@ Nama: ${formData.get('nama')}
 No WA: ${formData.get('wa')}
 Email: ${formData.get('email') || '-'}
 IG: ${formData.get('ig') || '-'}
-Jml Helm: ${document.getElementById('inputJmlHelm').value}
+Jml Helm: ${unitHelmets}
 Tgl Sewa: ${formatDate(formData.get('mulai'))}
 Tgl Kembali: ${formatDate(formData.get('kembali'))}
 Harga: ${unitNewBasePrice}
