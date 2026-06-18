@@ -16,23 +16,47 @@
         .header-box { background: #2d3436; color: white; padding: 25px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         
         /* TIMELINE TABLE STYLING */
-        .timeline-wrapper { overflow-x: auto; overflow-y: auto; max-height: 70vh; background: #fff; position: relative; }
+        .timeline-wrapper { overflow-x: auto; overflow-y: auto; max-height: 75vh; background: #fff; position: relative; }
         .table-timeline { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 800px; font-size: 0.85rem; }
-        .table-timeline th, .table-timeline td { border: 1px solid #ecf0f1; text-align: center; vertical-align: middle; padding: 8px 5px; min-width: 45px; height: 45px; }
+        .table-timeline th, .table-timeline td { border: 1px solid #ecf0f1; text-align: center; vertical-align: middle; padding: 8px 5px; min-width: 45px; height: 45px; position: relative; }
         
         /* STICKY COLUMNS & HEADERS */
-        .sticky-col { position: sticky; left: 0; background-color: #fff; z-index: 10; text-align: left !important; min-width: 200px; font-weight: 600; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+        .sticky-col { position: sticky; left: 0; background-color: #fff; z-index: 15; text-align: left !important; min-width: 200px; font-weight: 600; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
         .sticky-header { position: sticky; top: 0; background-color: #2d3436; color: #fff; z-index: 11; border-color: #434e52 !important; }
-        .sticky-col-header { position: sticky; left: 0; top: 0; background-color: #fd7e14; color: #fff; z-index: 12; font-weight: 800; border-color: #e67e22 !important; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sticky-col-header { position: sticky; left: 0; top: 0; background-color: #2c3e50; color: #fff; z-index: 16; font-weight: 800; border-color: #34495e !important; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
         
-        /* DATA CELLS STATUS */
+        /* DATA CELLS BACKGROUNDS */
         .cell-free { background-color: #fff; cursor: pointer; transition: 0.2s; }
         .cell-free:hover { background-color: #f1f2f6; }
-        .cell-booked { background-color: #fd7e14; color: #fff; border-left: none; border-right: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
-        .cell-start { border-radius: 8px 0 0 8px; border-left: 1px solid #e67e22 !important; }
-        .cell-end { border-radius: 0 8px 8px 0; border-right: 1px solid #e67e22 !important; }
         .cell-today-col { background-color: #fff3cd !important; border-color: #ffeeba !important; }
+
+        /* STATUS COLORS */
+        .cell-occupied { color: #fff; border-left: none; border-right: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .status-booked { background-color: #f1c40f !important; color: #000 !important; } /* Kuning */
+        .status-rent { background-color: #2ecc71 !important; color: #fff !important; } /* Hijau */
+        .status-done { background-color: #95a5a6 !important; color: #fff !important; } /* Abu-abu */
+        .status-overdue { background-color: #e74c3c !important; color: #fff !important; } /* Merah */
+
+        /* BLOCK BORDERS */
+        .cell-start { border-radius: 8px 0 0 8px; border-left: 1px solid rgba(0,0,0,0.1) !important; }
+        .cell-end { border-radius: 0 8px 8px 0; border-right: 1px solid rgba(0,0,0,0.1) !important; }
         
+        /* OVERLAY NAMA PENYEWA */
+        .booking-name {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            white-space: nowrap;
+            font-weight: 800;
+            font-size: 0.75rem;
+            z-index: 5;
+            pointer-events: none; /* Agar klik tembus */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+        }
+        /* Hilangkan shadow khusus status kuning agar teksnya tetap bersih */
+        .status-booked .booking-name { text-shadow: none; color: #2d3436; }
+
         /* SCROLLBAR CUSTOM */
         .timeline-wrapper::-webkit-scrollbar { height: 10px; width: 10px; }
         .timeline-wrapper::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -51,13 +75,20 @@
                 <p class="m-0 opacity-75" style="font-size: 0.85rem;" id="lblSubTitle">Real-time Occupancy Board</p>
             </div>
             
-            <!-- Kontrol Pemilihan Bulan -->
             <div class="d-flex align-items-center gap-2">
                 <button onclick="changeMonth(-1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-left"></i></button>
                 <input type="month" id="monthPicker" class="form-control form-control-sm bg-light fw-bold" style="width: 150px; cursor: pointer;">
                 <button onclick="changeMonth(1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-right"></i></button>
                 <button onclick="refreshData()" class="btn btn-warning btn-sm fw-bold ms-2"><i class="fas fa-sync-alt"></i></button>
             </div>
+        </div>
+
+        <!-- Indikator Warna -->
+        <div class="bg-light px-4 py-2 border-bottom d-flex gap-3 flex-wrap" style="font-size: 0.75rem; font-weight: 700;">
+            <span><i class="fas fa-square" style="color: #f1c40f;"></i> Booked</span>
+            <span><i class="fas fa-square" style="color: #2ecc71;"></i> Rent</span>
+            <span><i class="fas fa-square" style="color: #95a5a6;"></i> Done / Arsip</span>
+            <span><i class="fas fa-square" style="color: #e74c3c;"></i> Overdue (Telat Kembali)</span>
         </div>
 
         <!-- Status Loading -->
@@ -86,17 +117,16 @@
     const params = new URLSearchParams(window.location.search);
     const clientToken = params.get('token') || 'mrd';
     
-    // URL WEB APP GAS ROUTER MASTER
-    const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${clientToken}`;
+    // GANTI DENGAN URL WEB APP GAS ROUTER SUHU YANG BARU DIDEPLOY
+    const API_URL = `https://script.google.com/macros/s/AKfycbw6C9fNfM7Wf_0B2vXm38R8lKshGfL_YfMco8iN_Spt_8qNHeFvX0xZ3Wf2C2z7F9C6/exec?token=${clientToken}`;
 
     let motors = [];
     let bookings = [];
     
-    // Setup Default Bulan Ini
     const monthPicker = document.getElementById('monthPicker');
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Kunci jam hari ini ke 00:00 untuk komparasi overdue yang akurat
     
-    // Format YYYY-MM untuk input type="month"
     function formatMonthInput(date) {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     }
@@ -107,9 +137,7 @@
         refreshData();
     };
 
-    monthPicker.addEventListener('change', () => {
-        renderTimeline();
-    });
+    monthPicker.addEventListener('change', () => { renderTimeline(); });
 
     function changeMonth(delta) {
         const currentVal = monthPicker.value;
@@ -124,7 +152,7 @@
         document.getElementById('timelineContainer').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
         try {
-            // 🌟 JURUS BYPASS GATEKEEPER: Hasilkan waktu unik setiap kali memanggil API
+            // 🌟 JURUS BYPASS GATEKEEPER (Waktu Dinamis Anti Cache)
             const uniqueTime = Date.now(); 
             const fetchUrl = `${API_URL}&t=${uniqueTime}`;
             
@@ -160,32 +188,27 @@
 
         const [selectedYear, selectedMonth] = monthPicker.value.split('-');
         const year = parseInt(selectedYear);
-        const monthIndex = parseInt(selectedMonth) - 1; // 0-based index
+        const monthIndex = parseInt(selectedMonth) - 1; 
         
-        // Hitung jumlah hari dalam bulan yang dipilih
         const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
         
-        // Render Header: Kolom 1
         theadRow.innerHTML = `<th class="sticky-col-header text-uppercase">ARMADA UNIT</th>`;
         
-        // Render Header: Tanggal 1 s/d N
         const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
         for (let d = 1; d <= daysInMonth; d++) {
             const currentIterDateStr = `${year}-${monthIndex}-${d}`;
             const isToday = (currentIterDateStr === todayStr);
-            const headerClass = isToday ? "sticky-header cell-today-col" : "sticky-header";
+            const headerClass = isToday ? "sticky-header cell-today-col text-dark" : "sticky-header";
             
             theadRow.innerHTML += `<th class="${headerClass}">${d}</th>`;
         }
 
-        // Render Body: Baris per Motor
         motors.forEach(m => {
             const plate = String(m[0]).trim();
             const tipe = m[1];
             const brand = m[2];
             const statusFisik = String(m[5]).toLowerCase();
             
-            // Jangan tampilkan jika motor rusak atau servis
             if (statusFisik === "rusak" || statusFisik === "servis") return;
 
             let trHtml = `<tr><td class="sticky-col">
@@ -193,24 +216,27 @@
                             <small class="text-muted"><i class="fas fa-motorcycle me-1"></i>${plate.toUpperCase()}</small>
                           </td>`;
 
-            // Loop per hari untuk mengecek okupansi
             for (let d = 1; d <= daysInMonth; d++) {
-                const cellDate = new Date(year, monthIndex, d, 12, 0, 0); // Set ke jam 12 siang agar aman dari zona waktu
+                const cellDate = new Date(year, monthIndex, d, 12, 0, 0); 
                 
                 const occupancy = checkOccupancy(plate, cellDate);
                 const currentIterDateStr = `${year}-${monthIndex}-${d}`;
                 const isToday = (currentIterDateStr === todayStr);
 
                 if (occupancy.isOccupied) {
-                    let classes = "cell-booked";
-                    // Bulatkan ujung balok warna jika ini hari pertama/terakhir sewa
+                    let classes = `cell-occupied status-${occupancy.status}`;
                     if (occupancy.isStart) classes += " cell-start";
                     if (occupancy.isEnd) classes += " cell-end";
                     
-                    trHtml += `<td class="${classes}" title="Disewa"></td>`;
+                    let cellContent = "";
+                    // Tampilkan Nama Tamu pada kolom sel HARI PERTAMA saja agar text memanjang rapi
+                    if (occupancy.isStart) {
+                        cellContent = `<span class="booking-name">${occupancy.nama}</span>`;
+                    }
+
+                    trHtml += `<td class="${classes}" title="${occupancy.nama} (${occupancy.status.toUpperCase()})">${cellContent}</td>`;
                 } else {
                     const bgClass = isToday ? "cell-today-col" : "cell-free";
-                    // Fungsi klik untuk membuat booking baru langsung dari kalender
                     const formattedDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                     trHtml += `<td class="${bgClass}" onclick="jumpToBooking('${plate}', '${formattedDate}')"></td>`;
                 }
@@ -220,39 +246,53 @@
         });
     }
 
-    // Fungsi Logika Pencocokan Tanggal (Sangat Presisi)
+    // 🌟 LOGIKA WARNA & STATUS OVERDUE
     function checkOccupancy(plate, cellDate) {
-        // Membersihkan spasi pada plat motor agar pencarian akurat
         const cleanTargetPlate = plate.replace(/\s/g, '').toLowerCase();
 
         for (let b of bookings) {
             const cleanBookingPlate = String(b.no_motor).replace(/\s/g, '').toLowerCase();
             if (cleanBookingPlate !== cleanTargetPlate) continue;
 
+            const st = b.status ? b.status.toLowerCase().trim() : "";
+            if (st.includes("cancel")) continue; // Abaikan booking batal
+
             const bStart = new Date(b.start);
             const bEnd = new Date(b.end);
 
             if (isNaN(bStart.getTime()) || isNaN(bEnd.getTime())) continue;
 
-            // Set waktu ke tengah malam agar komparasi murni berdasarkan tanggal
             bStart.setHours(0, 0, 0, 0);
-            bEnd.setHours(23, 59, 59, 999);
+            bEnd.setHours(23, 59, 59, 999); // Akhir hari sewa
 
             if (cellDate >= bStart && cellDate <= bEnd) {
-                // Deteksi apakah sel ini adalah ujung balok
                 const isStart = (cellDate.getDate() === bStart.getDate() && cellDate.getMonth() === bStart.getMonth());
                 const isEnd = (cellDate.getDate() === bEnd.getDate() && cellDate.getMonth() === bEnd.getMonth());
                 
-                return { isOccupied: true, isStart: isStart, isEnd: isEnd };
+                // Tentukan warna status
+                let blockStatus = "booked"; // Default: Kuning
+                if (st === "rent") blockStatus = "rent"; // Hijau
+                if (st === "done") blockStatus = "done"; // Abu-abu
+
+                // 🚨 SENSOR OVERDUE: Jika hari ini > Tanggal Kembali, tapi status BUKAN "Done"
+                if (today > bEnd && st !== "done") {
+                    blockStatus = "overdue"; // Merah!
+                }
+
+                return { 
+                    isOccupied: true, 
+                    isStart: isStart, 
+                    isEnd: isEnd,
+                    status: blockStatus,
+                    nama: b.nama || "No Name"
+                };
             }
         }
         return { isOccupied: false };
     }
 
-    // Fungsi Navigasi Cepat (Click-to-Book)
     function jumpToBooking(plate, dateStr) {
         if(confirm(`Buat pesanan baru untuk motor ${plate.toUpperCase()} pada tanggal ${dateStr}?`)) {
-            // Arahkan ke form.html dengan data yang sudah terisi (autofill)
             const urlParams = new URLSearchParams({
                 token: clientToken,
                 motor: plate,
