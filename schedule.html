@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Scheduler - AMS Pro</title>
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <meta name="theme-color" content="#2d3436">
+
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', Roboto, sans-serif; padding-top: 20px; padding-bottom: 50px; }
+        .main-card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: #fff; overflow: hidden; }
+        .header-box { background: #2d3436; color: white; padding: 25px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        
+        /* TIMELINE TABLE STYLING */
+        .timeline-wrapper { overflow-x: auto; overflow-y: auto; max-height: 70vh; background: #fff; position: relative; }
+        .table-timeline { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 800px; font-size: 0.85rem; }
+        .table-timeline th, .table-timeline td { border: 1px solid #ecf0f1; text-align: center; vertical-align: middle; padding: 8px 5px; min-width: 45px; height: 45px; }
+        
+        /* STICKY COLUMNS & HEADERS (Jurus CSS Canggih) */
+        .sticky-col { position: sticky; left: 0; background-color: #fff; z-index: 10; text-align: left !important; min-width: 200px; font-weight: 600; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+        .sticky-header { position: sticky; top: 0; background-color: #2d3436; color: #fff; z-index: 11; border-color: #434e52 !important; }
+        .sticky-col-header { position: sticky; left: 0; top: 0; background-color: #fd7e14; color: #fff; z-index: 12; font-weight: 800; border-color: #e67e22 !important; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        
+        /* DATA CELLS STATUS */
+        .cell-free { background-color: #fff; cursor: pointer; transition: 0.2s; }
+        .cell-free:hover { background-color: #f1f2f6; }
+        .cell-booked { background-color: #fd7e14; color: #fff; border-left: none; border-right: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .cell-start { border-radius: 8px 0 0 8px; border-left: 1px solid #e67e22 !important; }
+        .cell-end { border-radius: 0 8px 8px 0; border-right: 1px solid #e67e22 !important; }
+        .cell-today-col { background-color: #fff3cd !important; border-color: #ffeeba !important; }
+        
+        /* SCROLLBAR CUSTOM */
+        .timeline-wrapper::-webkit-scrollbar { height: 10px; width: 10px; }
+        .timeline-wrapper::-webkit-scrollbar-track { background: #f1f1f1; }
+        .timeline-wrapper::-webkit-scrollbar-thumb { background: #b2bec3; border-radius: 10px; }
+        .timeline-wrapper::-webkit-scrollbar-thumb:hover { background: #636e72; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-md-4">
+    <div class="main-card">
+        <!-- Header -->
+        <div class="header-box">
+            <div>
+                <h3 class="fw-bold m-0" style="letter-spacing: -1px;"><i class="fas fa-calendar-alt me-2 text-warning"></i> Fleet Scheduler</h3>
+                <p class="m-0 opacity-75" style="font-size: 0.85rem;" id="lblSubTitle">Real-time Occupancy Board</p>
+            </div>
+            
+            <!-- Kontrol Pemilihan Bulan -->
+            <div class="d-flex align-items-center gap-2">
+                <button onclick="changeMonth(-1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-left"></i></button>
+                <input type="month" id="monthPicker" class="form-control form-control-sm bg-light fw-bold" style="width: 150px; cursor: pointer;">
+                <button onclick="changeMonth(1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-right"></i></button>
+                <button onclick="refreshData()" class="btn btn-warning btn-sm fw-bold ms-2"><i class="fas fa-sync-alt"></i></button>
+            </div>
+        </div>
+
+        <!-- Status Loading -->
+        <div id="loading" class="text-center py-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p class="mt-2 text-muted fw-bold">Synchronizing database...</p>
+        </div>
+
+        <!-- Papan Matriks Timeline -->
+        <div class="timeline-wrapper" id="timelineContainer" style="display: none;">
+            <table class="table-timeline" id="timelineTable">
+                <thead>
+                    <tr id="theadRow">
+                        <!-- Header akan dirender oleh JS -->
+                    </tr>
+                </thead>
+                <tbody id="tbodyContent">
+                    <!-- Data Unit & Balok Okupansi akan dirender oleh JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const clientToken = params.get('token') || 'mrd';
+    
+    // GANTI DENGAN URL WEB APP GAS ROUTER SUHU YANG BARU DIDEPLOY
+    const API_URL = `https://script.google.com/macros/s/AKfycbw6C9fNfM7Wf_0B2vXm38R8lKshGfL_YfMco8iN_Spt_8qNHeFvX0xZ3Wf2C2z7F9C6/exec?token=${clientToken}`;
+
+    let motors = [];
+    let bookings = [];
+    
+    // Setup Default Bulan Ini
+    const monthPicker = document.getElementById('monthPicker');
+    const today = new Date();
+    
+    // Format YYYY-MM untuk input type="month"
+    function formatMonthInput(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+    monthPicker.value = formatMonthInput(today);
+
+    window.onload = () => {
+        document.getElementById('lblSubTitle').innerText = `Sesi: ${clientToken.toUpperCase()} | Live Board`;
+        refreshData();
+    };
+
+    monthPicker.addEventListener('change', () => {
+        renderTimeline();
+    });
+
+    function changeMonth(delta) {
+        const currentVal = monthPicker.value;
+        if (!currentVal) return;
+        const [year, month] = currentVal.split('-');
+        const dateObj = new Date(year, parseInt(month) - 1 + delta, 1);
+        monthPicker.value = formatMonthInput(dateObj);
+        renderTimeline();
+    }
+
+    async function refreshData() {
+        document.getElementById('timelineContainer').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            
+            if (data.error) {
+                alert("❌ Akses Ditolak: " + data.message);
+                return;
+            }
+
+            motors = data.items || [];
+            bookings = data.bookings || [];
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('timelineContainer').style.display = 'block';
+            
+            renderTimeline();
+        } catch (error) { 
+            console.error("Gagal menarik data API:", error);
+            alert("❌ Gagal terhubung ke database. Periksa koneksi internet Anda.");
+        }
+    }
+
+    function renderTimeline() {
+        const theadRow = document.getElementById('theadRow');
+        const tbodyContent = document.getElementById('tbodyContent');
+        
+        theadRow.innerHTML = "";
+        tbodyContent.innerHTML = "";
+
+        const [selectedYear, selectedMonth] = monthPicker.value.split('-');
+        const year = parseInt(selectedYear);
+        const monthIndex = parseInt(selectedMonth) - 1; // 0-based index
+        
+        // Hitung jumlah hari dalam bulan yang dipilih
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+        
+        // Render Header: Kolom 1
+        theadRow.innerHTML = `<th class="sticky-col-header text-uppercase">ARMADA UNIT</th>`;
+        
+        // Render Header: Tanggal 1 s/d N
+        const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const currentIterDateStr = `${year}-${monthIndex}-${d}`;
+            const isToday = (currentIterDateStr === todayStr);
+            const headerClass = isToday ? "sticky-header cell-today-col" : "sticky-header";
+            
+            theadRow.innerHTML += `<th class="${headerClass}">${d}</th>`;
+        }
+
+        // Render Body: Baris per Motor
+        motors.forEach(m => {
+            const plate = String(m[0]).trim();
+            const tipe = m[1];
+            const brand = m[2];
+            const statusFisik = String(m[5]).toLowerCase();
+            
+            // Jangan tampilkan jika motor rusak
+            if (statusFisik === "rusak") return;
+
+            let trHtml = `<tr><td class="sticky-col">
+                            <span class="d-block text-dark text-truncate" style="max-width: 180px;">${brand} ${tipe}</span>
+                            <small class="text-muted"><i class="fas fa-motorcycle me-1"></i>${plate.toUpperCase()}</small>
+                          </td>`;
+
+            // Loop per hari untuk mengecek okupansi
+            for (let d = 1; d <= daysInMonth; d++) {
+                const cellDate = new Date(year, monthIndex, d, 12, 0, 0); // Set ke jam 12 siang agar aman dari zona waktu
+                
+                const occupancy = checkOccupancy(plate, cellDate);
+                const currentIterDateStr = `${year}-${monthIndex}-${d}`;
+                const isToday = (currentIterDateStr === todayStr);
+
+                if (occupancy.isOccupied) {
+                    let classes = "cell-booked";
+                    // Bulatkan ujung balok warna jika ini hari pertama/terakhir sewa
+                    if (occupancy.isStart) classes += " cell-start";
+                    if (occupancy.isEnd) classes += " cell-end";
+                    
+                    trHtml += `<td class="${classes}" title="Disewa"></td>`;
+                } else {
+                    const bgClass = isToday ? "cell-today-col" : "cell-free";
+                    // Fungsi klik untuk membuat booking baru langsung dari kalender
+                    const formattedDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    trHtml += `<td class="${bgClass}" onclick="jumpToBooking('${plate}', '${formattedDate}')"></td>`;
+                }
+            }
+            trHtml += `</tr>`;
+            tbodyContent.innerHTML += trHtml;
+        });
+    }
+
+    // Fungsi Logika Pencocokan Tanggal (Sangat Presisi)
+    function checkOccupancy(plate, cellDate) {
+        // Membersihkan spasi pada plat motor agar pencarian akurat
+        const cleanTargetPlate = plate.replace(/\s/g, '').toLowerCase();
+
+        for (let b of bookings) {
+            const cleanBookingPlate = String(b.no_motor).replace(/\s/g, '').toLowerCase();
+            if (cleanBookingPlate !== cleanTargetPlate) continue;
+
+            const bStart = new Date(b.start);
+            const bEnd = new Date(b.end);
+
+            if (isNaN(bStart.getTime()) || isNaN(bEnd.getTime())) continue;
+
+            // Set waktu ke tengah malam agar komparasi murni berdasarkan tanggal
+            bStart.setHours(0, 0, 0, 0);
+            bEnd.setHours(23, 59, 59, 999);
+
+            if (cellDate >= bStart && cellDate <= bEnd) {
+                // Deteksi apakah sel ini adalah ujung balok
+                const isStart = (cellDate.getDate() === bStart.getDate() && cellDate.getMonth() === bStart.getMonth());
+                const isEnd = (cellDate.getDate() === bEnd.getDate() && cellDate.getMonth() === bEnd.getMonth());
+                
+                return { isOccupied: true, isStart: isStart, isEnd: isEnd };
+            }
+        }
+        return { isOccupied: false };
+    }
+
+    // Fungsi Navigasi Cepat (Click-to-Book)
+    function jumpToBooking(plate, dateStr) {
+        if(confirm(`Buat pesanan baru untuk motor ${plate.toUpperCase()} pada tanggal ${dateStr}?`)) {
+            // Arahkan ke form.html dengan data yang sudah terisi (autofill)
+            const urlParams = new URLSearchParams({
+                token: clientToken,
+                motor: plate,
+                start: dateStr
+            });
+            window.location.href = `form.html?${urlParams.toString()}`;
+        }
+    }
+</script>
+</body>
+</html>
