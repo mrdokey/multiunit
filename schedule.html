@@ -54,7 +54,7 @@
             pointer-events: none; /* Agar klik tembus */
             text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
         }
-        /* Hilangkan shadow khusus status kuning agar teksnya tetap bersih */
+        /* Hilangkan shadow khusus status kuning agar teksnya tetap bersih dibaca */
         .status-booked .booking-name { text-shadow: none; color: #2d3436; }
 
         /* SCROLLBAR CUSTOM */
@@ -118,14 +118,13 @@
     const clientToken = params.get('token') || 'mrd';
     
     // GANTI DENGAN URL WEB APP GAS ROUTER SUHU YANG BARU DIDEPLOY
-    const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${clientToken}`;
+    const API_URL = `https://script.google.com/macros/s/AKfycbw6C9fNfM7Wf_0B2vXm38R8lKshGfL_YfMco8iN_Spt_8qNHeFvX0xZ3Wf2C2z7F9C6/exec?token=${clientToken}`;
 
     let motors = [];
     let bookings = [];
     
     const monthPicker = document.getElementById('monthPicker');
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Kunci jam hari ini ke 00:00 untuk komparasi overdue yang akurat
     
     function formatMonthInput(date) {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -275,7 +274,9 @@
                 if (st === "done") blockStatus = "done"; // Abu-abu
 
                 // 🚨 SENSOR OVERDUE: Jika hari ini > Tanggal Kembali, tapi status BUKAN "Done"
-                if (today > bEnd && st !== "done") {
+                const todayDateOnly = new Date();
+                todayDateOnly.setHours(0,0,0,0);
+                if (todayDateOnly > bEnd && st !== "done") {
                     blockStatus = "overdue"; // Merah!
                 }
 
