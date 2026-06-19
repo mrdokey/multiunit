@@ -34,7 +34,12 @@
                 <p class="m-0 opacity-75" style="font-size: 0.85rem;" id="lblSubTitle">Real-time Financial Board</p>
             </div>
             
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- 🌟 BARU: Penyaring Unit Motor (Plat Nomor) -->
+                <select id="unitFilter" class="form-select form-select-sm bg-light fw-bold" style="width: 140px; cursor: pointer;">
+                    <option value="all">ALL UNITS</option>
+                </select>
+                
                 <button onclick="changeMonth(-1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-left"></i></button>
                 <input type="month" id="monthPicker" class="form-control form-control-sm bg-light fw-bold" style="width: 150px; cursor: pointer;">
                 <button onclick="changeMonth(1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-right"></i></button>
@@ -51,7 +56,7 @@
         <!-- ISI DASHBOARD UTAMA -->
         <div id="dashboardContent" style="display: none;" class="p-4">
             
-            <!-- 1. KARTU EXECUTIVE SUMMARY (RIIL KAS MASUK & KELUAR) -->
+            <!-- 1. KARTU EXECUTIVE SUMMARY -->
             <div class="section-title"><i class="fas fa-chart-line text-warning"></i> Executive Summary</div>
             <div class="row g-4 mb-5">
                 <div class="col-md-4">
@@ -72,14 +77,13 @@
                     <div class="card stat-card bg-profit p-4 shadow-sm">
                         <small class="text-white-50 fw-bold uppercase">LABA BERSIH (NET PROFIT)</small>
                         <h2 class="fw-bold mt-2" id="valLabaBersih">IDR 0</h2>
-                        <small class="text-white-50">Kas Masuk dikurangi Kas Keluar</small>
+                        <small class="text-white-50">Kas Masuk dikurangi Kas Keluar & Modal</small>
                     </div>
                 </div>
             </div>
 
             <!-- 2. BREAKDOWN CATEGORIES (PENDAPATAN VS PENGELUARAN) -->
             <div class="row g-4 mb-5">
-                <!-- Sumber Pendapatan Kas Masuk -->
                 <div class="col-lg-6">
                     <div class="section-title"><i class="fas fa-arrow-circle-down text-success"></i> Income Sources</div>
                     <div class="table-responsive bg-light p-3 rounded-3 border">
@@ -98,7 +102,6 @@
                     </div>
                 </div>
 
-                <!-- Kategori Pengeluaran Kas Keluar -->
                 <div class="col-lg-6">
                     <div class="section-title"><i class="fas fa-arrow-circle-up text-danger"></i> Expense Categories</div>
                     <div class="table-responsive bg-light p-3 rounded-3 border">
@@ -116,6 +119,12 @@
                         </table>
                     </div>
                 </div>
+            </div>
+
+            <!-- 2.5 SUMBER PENDAPATAN ADD-ONS (KARTU DINAMIS) -->
+            <div class="section-title"><i class="fas fa-tags text-warning"></i> Add-on & Services Revenue (Itemized)</div>
+            <div class="row g-3 mb-5" id="addonRevenueContainer">
+                <!-- Kartu Pendapatan tambahan asuransi dll akan di-render dinamis oleh JS di sini -->
             </div>
 
             <!-- 3. BUKU KAS LEDGER DIGITAL -->
@@ -145,12 +154,16 @@
     const params = new URLSearchParams(window.location.search);
     const clientToken = params.get('token') || 'mrd';
     
-    // 🌟 SINKRONISASI: Menggunakan URL GAS Master terbaru milik Suhu (q4YBHk/exec)
+    // URL GAS MASTER UTAMA TERBARU (q4YBHk/exec)
     const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${clientToken}`;
 
     let cashflows = []; 
+    let bookings = [];  
+    let motors = [];
+    let clientColumns = [];
 
     const monthPicker = document.getElementById('monthPicker');
+    const unitFilter = document.getElementById('unitFilter');
     const today = new Date();
     
     function formatMonthInput(date) {
@@ -164,6 +177,7 @@
     };
 
     monthPicker.addEventListener('change', () => { kalkulasiKeuangan(); });
+    unitFilter.addEventListener('change', () => { kalkulasiKeuangan(); });
 
     function changeMonth(delta) {
         const currentVal = monthPicker.value;
@@ -178,7 +192,6 @@
         document.getElementById('dashboardContent').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
         try {
-            // Bypass Gatekeeper
             const uniqueTime = Date.now(); 
             const fetchUrl = `${API_URL}&t=${uniqueTime}`;
             
@@ -191,8 +204,18 @@
                 return;
             }
 
-            // Ambil data cashflows riil hasil sinkronisasi dari Google Sheet klien!
+            motors = data.items || [];
+            bookings = data.bookings || [];
             cashflows = data.cashflows || []; 
+            clientColumns = data.columns || [];
+
+            // Inisialisasi Filter Unit Motor di Header
+            const filterSelect = document.getElementById('unitFilter');
+            filterSelect.innerHTML = `<option value="all">ALL UNITS</option>`;
+            motors.forEach(m => {
+                const plat = String(m[0]).trim().toUpperCase();
+                filterSelect.innerHTML += `<option value="${plat}">${plat} - ${m[1]}</option>`;
+            });
 
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboardContent').style.display = 'block';
@@ -205,13 +228,32 @@
         }
     }
 
+    function hasColumn(columnName) {
+        if (clientColumns.length === 0) return true; 
+        const cleanTarget = columnName.toLowerCase().replace(/\s/g, "").replace(/_/g, "");
+        return clientColumns.some(col => col.toLowerCase().replace(/\s/g, "").replace(/_/g, "") === cleanTarget);
+    }
+
     function kalkulasiKeuangan() {
         const [selectedYear, selectedMonth] = monthPicker.value.split('-');
         const targetYear = parseInt(selectedYear);
         const targetMonthIndex = parseInt(selectedMonth) - 1;
+        const selectedUnit = document.getElementById('unitFilter').value.toLowerCase().replace(/\s/g, "");
 
         let totalKasMasuk = 0;
         let totalKasKeluar = 0;
+
+        // Penampung data add-ons dinamis
+        let totalBaseRental = 0;
+        let totalDiscount = 0;
+        let totalInsurance = 0;
+        let totalSurface = 0;
+        let totalHolder = 0;
+        let totalDelivery = 0;
+        let totalAdditional = 0;
+        
+        // 🌟 BREADOWN BARU: Jumlah Pokok (HPP / Modal Klien bbt)
+        let totalJumlahPokok = 0;
 
         let incomeCategories = {};
         let expenseCategories = {};
@@ -219,9 +261,50 @@
         const ledgerBody = document.getElementById('ledgerBody');
         ledgerBody.innerHTML = "";
 
-        // Urutkan transaksi berdasarkan tanggal teratas (Terbaru)
+        // --------------------------------------------------------
+        // 1. FILTER & HITUNG TRANSAKSI REGISTER (PENDAPATAN DETAIL)
+        // --------------------------------------------------------
+        bookings.forEach(b => {
+            const bStatus = b.status ? b.status.toLowerCase() : "";
+            if (bStatus.includes("cancel")) return; 
+
+            // Filter Berdasarkan Plat Motor jika dipilih
+            const motorPlat = b.no_motor ? b.no_motor.toLowerCase().replace(/\s/g, "") : "";
+            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return;
+
+            const bStart = new Date(b.start);
+            if (bStart.getFullYear() !== targetYear || bStart.getMonth() !== targetMonthIndex) return;
+
+            const basePrice = parseInt(b.harga) || 0;
+            const duration = parseInt(b["jml hari"] || b["jml_hari"]) || 1;
+            const discountVal = parseInt(b.diskon) || 0;
+            
+            totalBaseRental += (basePrice * duration);
+            totalDiscount += discountVal;
+
+            // 🌟 HITUNG POKOK KLIEN bbt (HPP): Jumlah Pokok / Pokok
+            if (hasColumn("jumlah pokok")) {
+                totalJumlahPokok += (parseInt(b["jumlah pokok"]) || parseInt(b["pokok"]) || 0);
+            }
+
+            // Akumulasi pendapatan Add-on
+            if (hasColumn("insurance")) totalInsurance += (parseInt(b.insurance) || 0);
+            if (hasColumn("surface")) totalSurface += (parseInt(b.surface) || 0);
+            if (hasColumn("phone holder")) totalHolder += (parseInt(b["phone holder"] || b["phone_holder"]) || 0);
+            if (hasColumn("delivery")) totalDelivery += (parseInt(b.delivery) || 0);
+            if (hasColumn("additional")) totalAdditional += (parseInt(b.additional) || 0);
+        });
+
+        // --------------------------------------------------------
+        // 2. FILTER & HITUNG KAS MASUK/KELUAR DARI CASHFLOW SHEET
+        // --------------------------------------------------------
         const filteredCashFlows = cashflows.filter(cf => {
             if (!cf.tanggal) return false;
+            
+            // Filter Berdasarkan Plat Motor jika dipilih
+            const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
+            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return false;
+
             const cfDate = parseKeTanggal(cf.tanggal);
             return cfDate.getFullYear() === targetYear && cfDate.getMonth() === targetMonthIndex;
         }).sort((a, b) => parseKeTanggal(b.tanggal) - parseKeTanggal(a.tanggal));
@@ -236,11 +319,9 @@
 
                 if (type === "masuk") {
                     totalKasMasuk += amount;
-                    // Akumulasi pendapatan per kategori dinamis dari Google Sheets harian
                     if (!incomeCategories[category]) incomeCategories[category] = 0;
                     incomeCategories[category] += amount;
 
-                    // Tambahkan ke Buku Kas (Ledger)
                     ledgerBody.innerHTML += `
                         <tr>
                             <td><span class="badge bg-success">MASUK</span><br><small class="text-muted">${dateStr}</small></td>
@@ -250,11 +331,9 @@
                         </tr>`;
                 } else if (type === "keluar") {
                     totalKasKeluar += amount;
-                    // Akumulasi pengeluaran per kategori dinamis dari Google Sheets harian
                     if (!expenseCategories[category]) expenseCategories[category] = 0;
                     expenseCategories[category] += amount;
 
-                    // Tambahkan ke Buku Kas (Ledger)
                     ledgerBody.innerHTML += `
                         <tr>
                             <td><span class="badge bg-danger">KELUAR</span><br><small class="text-muted">${dateStr}</small></td>
@@ -266,6 +345,24 @@
             });
         } else {
             ledgerBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No cashflow transactions recorded for this month.</td></tr>`;
+        }
+
+        // Jika klien memiliki kolom "Jumlah Pokok" (seperti BBT), tambahkan ke total pengeluaran kumulatif
+        if (hasColumn("jumlah pokok") && totalJumlahPokok > 0) {
+            totalKasKeluar += totalJumlahPokok;
+            
+            // Masukkan "Jumlah Pokok" ke kategori Pengeluaran harian
+            if (!expenseCategories["HPP (Modal Pokok)"]) expenseCategories["HPP (Modal Pokok)"] = 0;
+            expenseCategories["HPP (Modal Pokok)"] += totalJumlahPokok;
+            
+            // Catat di Ledger sebagai catatan tersendiri
+            ledgerBody.innerHTML += `
+                <tr class="table-warning">
+                    <td><span class="badge bg-warning text-dark">HPP</span><br><small class="text-muted">Auto-Split</small></td>
+                    <td><strong>HPP (Modal Pokok)</strong></td>
+                    <td>Sistem: Akumulasi nilai pokok sewa unit motor bulan ini</td>
+                    <td class="text-end text-danger fw-bold">-Rp ${totalJumlahPokok.toLocaleString('id-ID')}</td>
+                </tr>`;
         }
 
         // Tampilkan Summary Executive
@@ -291,7 +388,7 @@
             incomeCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No income recorded for this month.</td></tr>`;
         }
 
-        // RENDER TABEL PENGELUARAN KAS KELUAR
+        // RENDER TABEL PENGELUARAN KAS KELUAR (TERMASUK HPP JIKA ADA)
         const expenseCategoryBody = document.getElementById('expenseCategoryBody');
         expenseCategoryBody.innerHTML = "";
         if (totalKasKeluar > 0) {
@@ -308,9 +405,48 @@
         } else {
             expenseCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No expenses recorded for this month.</td></tr>`;
         }
+
+        // RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
+        const addonContainer = document.getElementById('addonRevenueContainer');
+        addonContainer.innerHTML = "";
+
+        addonContainer.innerHTML += buatKartuAddonHTML("Base Rental Income", totalBaseRental, "fas fa-motorcycle");
+        addonContainer.innerHTML += buatKartuAddonHTML("Discounts Given", totalDiscount, "fas fa-percentage", true);
+
+        if (hasColumn("jumlah pokok") && totalJumlahPokok > 0) {
+            addonContainer.innerHTML += buatKartuAddonHTML("HPP (Modal Pokok)", totalJumlahPokok, "fas fa-hand-holding-usd", true);
+        }
+        if (hasColumn("insurance") && totalInsurance > 0) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Insurance Revenue", totalInsurance, "fas fa-shield-alt");
+        }
+        if (hasColumn("surface") && totalSurface > 0) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Surface Cleaning Revenue", totalSurface, "fas fa-soap");
+        }
+        if (hasColumn("phone holder") && totalHolder > 0) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Phone Holder Revenue", totalHolder, "fas fa-mobile-alt");
+        }
+        if (hasColumn("delivery") && totalDelivery > 0) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Delivery Fee Revenue", totalDelivery, "fas fa-truck");
+        }
+        if (hasColumn("additional") && totalAdditional > 0) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Additional Service Revenue", totalAdditional, "fas fa-plus-circle");
+        }
     }
 
-    // Converter Tanggal Robust
+    function buatKartuAddonHTML(title, value, iconClass, isRed = false) {
+        const textClass = isRed ? "text-danger" : "text-success";
+        return `
+            <div class="col-md-3 col-sm-6">
+                <div class="card p-3 border shadow-sm h-100 d-flex flex-row justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-bold d-block" style="font-size: 0.7rem;">${title.toUpperCase()}</small>
+                        <span class="fw-bold fs-5 ${textClass}">Rp ${value.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div class="fs-3 text-muted opacity-50"><i class="${iconClass}"></i></div>
+                </div>
+            </div>`;
+    }
+
     function parseKeTanggal(val) {
         if (val instanceof Date) return val;
         if (typeof val === "string") {
