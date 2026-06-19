@@ -36,16 +36,18 @@
             
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <!-- Dropdown Pilihan Unit Motor -->
-                <select id="unitFilter" class="form-select form-select-sm bg-light fw-bold" style="width: 140px; cursor: pointer;">
+                <select id="unitFilter" class="form-select form-select-sm bg-light fw-bold" style="width: 130px; cursor: pointer;">
                     <option value="all">ALL UNITS</option>
                 </select>
                 
-                <button onclick="changeMonth(-1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-left"></i></button>
-                <input type="month" id="monthPicker" class="form-control form-control-sm bg-light fw-bold" style="width: 150px; cursor: pointer;">
-                <button onclick="changeMonth(1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-right"></i></button>
-                <button onclick="refreshData()" class="btn btn-warning btn-sm fw-bold ms-2"><i class="fas fa-sync-alt"></i></button>
+                <!-- 🌟 REVOLUSI: Dua Input Tanggal Berjangka (Bisa Daily / Bulanan Bebas!) -->
+                <div class="d-flex align-items-center gap-1 bg-light p-1 rounded-3 border">
+                    <input type="date" id="startDate" class="form-control form-control-sm border-0 fw-bold" style="width: 125px; cursor: pointer;">
+                    <span class="text-dark-50 fw-bold" style="font-size: 0.8rem;">to</span>
+                    <input type="date" id="endDate" class="form-control form-control-sm border-0 fw-bold" style="width: 125px; cursor: pointer;">
+                </div>
                 
-                <!-- 🌟 BARU: Tombol Download Ekspor Laporan Excel -->
+                <button onclick="refreshData()" class="btn btn-warning btn-sm fw-bold ms-2"><i class="fas fa-sync-alt"></i></button>
                 <button onclick="exportToExcel()" class="btn btn-success btn-sm fw-bold ms-1" title="Unduh Laporan Excel"><i class="fas fa-file-excel"></i> EXPORT</button>
             </div>
         </div>
@@ -85,7 +87,7 @@
                 </div>
             </div>
 
-            <!-- 2. BREAKDOWN CATEGORIES (PENDAPATAN VS PENGELUARAN) -->
+            <!-- 2. BREAKDOWN CATEGORIES -->
             <div class="row g-4 mb-5">
                 <div class="col-lg-6">
                     <div class="section-title"><i class="fas fa-arrow-circle-down text-success"></i> Income Sources</div>
@@ -99,7 +101,7 @@
                                 </tr>
                             </thead>
                             <tbody id="incomeCategoryBody">
-                                <!-- Grouping kategori pendapatan dinamis -->
+                                <!-- Grouping kategori pendapatan -->
                             </tbody>
                         </table>
                     </div>
@@ -117,7 +119,7 @@
                                 </tr>
                             </thead>
                             <tbody id="expenseCategoryBody">
-                                <!-- Grouping kategori pengeluaran dinamis -->
+                                <!-- Grouping kategori pengeluaran -->
                             </tbody>
                         </table>
                     </div>
@@ -138,11 +140,11 @@
                 <table class="table table-hover table-custom m-0" id="tableLedger">
                     <thead>
                         <tr>
-                            <th>Unit Motor</th>
+                            <th>Unit Motor / Plat Nomor</th>
                             <th class="text-end">Pemasukan</th>
                             <th class="text-end">Pengeluaran</th>
                             <th class="text-end">Jumlah Pokok (HPP)</th>
-                            <th class="text-end">Laba Bersih Unit</th>
+                            <th class="text-end">Laba Bersih</th>
                         </tr>
                     </thead>
                     <tbody id="ledgerBody">
@@ -155,6 +157,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const params = new URLSearchParams(window.location.search);
     const clientToken = params.get('token') || 'mrd';
@@ -167,36 +170,40 @@
     let motors = [];
     let clientColumns = [];
 
-    const monthPicker = document.getElementById('monthPicker');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
     const unitFilter = document.getElementById('unitFilter');
     const today = new Date();
     
-    function formatMonthInput(date) {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    }
-    monthPicker.value = formatMonthInput(today);
-
+    // Set default range tanggal: Hari pertama s/d hari terakhir bulan berjalan
     window.onload = () => {
         document.getElementById('lblSubTitle').innerText = `Sesi: ${clientToken.toUpperCase()} | Financial Board`;
+        
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        startDateInput.value = formatDateInput(firstDay);
+        endDateInput.value = formatDateInput(lastDay);
+
         refreshData();
     };
 
-    monthPicker.addEventListener('change', () => { kalkulasiKeuangan(); });
-    unitFilter.addEventListener('change', () => { kalkulasiKeuangan(); });
-
-    function changeMonth(delta) {
-        const currentVal = monthPicker.value;
-        if (!currentVal) return;
-        const [year, month] = currentVal.split('-');
-        const dateObj = new Date(year, parseInt(month) - 1 + delta, 1);
-        monthPicker.value = formatMonthInput(dateObj);
-        kalkulasiKeuangan();
+    function formatDateInput(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
     }
+
+    startDateInput.addEventListener('change', kalkulasiKeuangan);
+    endDateInput.addEventListener('change', kalkulasiKeuangan);
+    unitFilter.addEventListener('change', kalkulasiKeuangan);
 
     async function refreshData() {
         document.getElementById('dashboardContent').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
         try {
+            // Bypass Gatekeeper
             const uniqueTime = Date.now(); 
             const fetchUrl = `${API_URL}&t=${uniqueTime}`;
             
@@ -240,9 +247,15 @@
     }
 
     function kalkulasiKeuangan() {
-        const [selectedYear, selectedMonth] = monthPicker.value.split('-');
-        const targetYear = parseInt(selectedYear);
-        const targetMonthIndex = parseInt(selectedMonth) - 1;
+        const startVal = startDateInput.value;
+        const endVal = endDateInput.value;
+
+        if (!startVal || !endVal) return;
+
+        // Set Rentang Tanggal Pencarian Murni (Tengah Malam s/d Akhir Hari)
+        const dStart = new Date(startVal); dStart.setHours(0,0,0,0);
+        const dEnd = new Date(endVal); dEnd.setHours(23,59,59,999);
+
         const selectedUnit = document.getElementById('unitFilter').value.toLowerCase().replace(/\s/g, "");
 
         let totalKasMasuk = 0;
@@ -256,13 +269,15 @@
         let totalHolder = 0;
         let totalDelivery = 0;
         let totalAdditional = 0;
+        
+        let totalJumlahPokokGlobal = 0;
 
         let incomeCategories = {};
         let expenseCategories = {};
         
-        let unitLedgerMap = {}; // { 'dk1234': { pemasukan: 0, pengeluaran: 0, pokok: 0 } }
+        let unitLedgerMap = {}; 
 
-        // Inisialisasi map seluruh motor agar tetap tampil di ledger meskipun transaksinya 0
+        // Inisialisasi map seluruh motor
         motors.forEach(m => {
             const plat = String(m[0]).toLowerCase().trim().replace(/\s/g, "");
             unitLedgerMap[plat] = {
@@ -284,14 +299,15 @@
 
             const motorPlat = b.no_motor ? b.no_motor.toLowerCase().replace(/\s/g, "") : "";
             const bStart = new Date(b.start);
-            if (bStart.getFullYear() !== targetYear || bStart.getMonth() !== targetMonthIndex) return;
+            
+            // Saring berdasarkan rentang tanggal terpilih harian/bulanan
+            if (bStart < dStart || bStart > dEnd) return;
 
             // Hitung Add-ons Kumulatif
             const basePrice = parseInt(b.harga) || 0;
             const duration = parseInt(b["jml hari"] || b["jml_hari"]) || 1;
             const discountVal = parseInt(b.diskon) || 0;
             
-            // Tambahkan ke variabel global jika unit cocok dengan filter
             if (selectedUnit === "all" || motorPlat === selectedUnit) {
                 totalBaseRental += (basePrice * duration);
                 totalDiscount += discountVal;
@@ -313,42 +329,44 @@
         // --------------------------------------------------------
         // 2. FILTER & HITUNG KAS MASUK/KELUAR DARI CASHFLOW SHEET
         // --------------------------------------------------------
-        cashflows.forEach(cf => {
-            if (!cf.tanggal) return;
-            const cfDate = parseKeTanggal(cf.tanggal);
-            if (cfDate.getFullYear() !== targetYear || cfDate.getMonth() !== targetMonthIndex) return;
-
+        const filteredCashFlows = cashflows.filter(cf => {
+            if (!cf.tanggal) return false;
+            
             const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
-            const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
-            const amount = parseInt(cf.jumlah) || 0;
-            const category = cf.kategori || "Umum";
+            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return false;
 
-            // Filter Berdasarkan Plat Motor di Header
-            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return;
+            const cfDate = parseKeTanggal(cf.tanggal);
+            return cfDate >= dStart && cfDate <= dEnd;
+        }).sort((a, b) => parseKeTanggal(b.tanggal) - parseKeTanggal(a.tanggal));
 
-            if (type === "masuk") {
-                totalKasMasuk += amount;
-                if (!incomeCategories[category]) incomeCategories[category] = 0;
-                incomeCategories[category] += amount;
+        if (filteredCashFlows.length > 0) {
+            filteredCashFlows.forEach(cf => {
+                const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
+                const amount = cf.pemasukan || cf.pengeluaran || cf.jumlah || 0; // Baca kolom pemutus dinamis
+                const category = cf.kategori || "Umum";
+                const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
 
-                // Catatkan ke Ledger unit
-                if (unitLedgerMap[motorPlat]) {
-                    unitLedgerMap[motorPlat].pemasukan += amount;
+                if (type === "masuk") {
+                    totalKasMasuk += amount;
+                    if (!incomeCategories[category]) incomeCategories[category] = 0;
+                    incomeCategories[category] += amount;
+
+                    if (unitLedgerMap[motorPlat]) {
+                        unitLedgerMap[motorPlat].pemasukan += amount;
+                    }
+                } else if (type === "keluar") {
+                    totalKasKeluar += amount;
+                    if (!expenseCategories[category]) expenseCategories[category] = 0;
+                    expenseCategories[category] += amount;
+
+                    if (unitLedgerMap[motorPlat]) {
+                        unitLedgerMap[motorPlat].pengeluaran += amount;
+                    }
                 }
-            } else if (type === "keluar") {
-                totalKasKeluar += amount;
-                if (!expenseCategories[category]) expenseCategories[category] = 0;
-                expenseCategories[category] += amount;
-
-                // Catatkan ke Ledger unit
-                if (unitLedgerMap[motorPlat]) {
-                    unitLedgerMap[motorPlat].pengeluaran += amount;
-                }
-            }
-        });
+            });
+        }
 
         // Akumulasi HPP (Jumlah Pokok) Klien BBT ke dalam Kas Keluar Global
-        let totalJumlahPokokGlobal = 0;
         for (let plat in unitLedgerMap) {
             const pVal = unitLedgerMap[plat].pokok;
             if (selectedUnit === "all" || plat === selectedUnit) {
@@ -367,22 +385,49 @@
         document.getElementById('valKasKeluar').innerText = `Rp ${totalKasKeluar.toLocaleString('id-ID')}`;
         document.getElementById('valLabaBersih').innerText = `Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}`;
 
-        // --------------------------------------------------------
-        // 3. RENDER TABEL PENDAPATAN & PENGELUARAN KATEGORI
-        // --------------------------------------------------------
-        renderKategoriTable('incomeCategoryBody', incomeCategories, totalKasMasuk, "No income recorded.");
-        renderKategoriTable('expenseCategoryBody', expenseCategories, totalKasKeluar, "No expenses recorded.");
+        // RENDER TABEL PENDAPATAN KAS MASUK
+        const incomeCategoryBody = document.getElementById('incomeCategoryBody');
+        incomeCategoryBody.innerHTML = "";
+        if (totalKasMasuk > 0) {
+            for (let cat in incomeCategories) {
+                const amount = incomeCategories[cat];
+                const percentage = ((amount / totalKasMasuk) * 100).toFixed(1);
+                incomeCategoryBody.innerHTML += `
+                    <tr>
+                        <td><strong>${cat}</strong></td>
+                        <td class="text-end fw-bold text-success">Rp ${amount.toLocaleString('id-ID')}</td>
+                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
+                    </tr>`;
+            }
+        } else {
+            incomeCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No income recorded for this selection.</td></tr>`;
+        }
 
-        // --------------------------------------------------------
-        // 4. RENDER LEDGER DETAIL KONSOLIDASI (SINKRON EXCEL BBT!)
-        // --------------------------------------------------------
+        // RENDER TABEL PENGELUARAN KAS KELUAR
+        const expenseCategoryBody = document.getElementById('expenseCategoryBody');
+        expenseCategoryBody.innerHTML = "";
+        if (totalKasKeluar > 0) {
+            for (let cat in expenseCategories) {
+                const amount = expenseCategories[cat];
+                const percentage = ((amount / totalKasKeluar) * 100).toFixed(1);
+                expenseCategoryBody.innerHTML += `
+                    <tr>
+                        <td><strong>${cat}</strong></td>
+                        <td class="text-end fw-bold text-danger">Rp ${amount.toLocaleString('id-ID')}</td>
+                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
+                    </tr>`;
+            }
+        } else {
+            expenseCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No expenses recorded for this selection.</td></tr>`;
+        }
+
+        // RENDER LEDGER DETAIL KONSOLIDASI (SINKRON EXCEL BBT!)
         const ledgerBody = document.getElementById('ledgerBody');
         ledgerBody.innerHTML = "";
 
         let hasDataLedger = false;
         for (let plat in unitLedgerMap) {
             const u = unitLedgerMap[plat];
-            // Filter Unit terpilih di ledger
             if (selectedUnit !== "all" && plat !== selectedUnit) continue;
 
             if (u.pemasukan > 0 || u.pengeluaran > 0 || u.pokok > 0) {
@@ -408,9 +453,7 @@
             ledgerBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No consolidated transactions found for this selection.</td></tr>`;
         }
 
-        // --------------------------------------------------------
-        // 5. RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
-        // --------------------------------------------------------
+        // RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
         const addonSection = document.getElementById('addonSection');
         const addonContainer = document.getElementById('addonRevenueContainer');
         addonContainer.innerHTML = "";
@@ -444,28 +487,8 @@
             addonContainer.innerHTML += buatKartuAddonHTML("Additional Service Revenue", totalAdditional, "fas fa-plus-circle");
             showAddonSection = true;
         }
-
-        addonSection.style.display = showAddonSection ? 'block' : 'none';
-    }
-
-    function renderKategoriTable(elementId, categories, totalAmount, emptyMessage) {
-        const body = document.getElementById(elementId);
-        body.innerHTML = "";
-        if (totalAmount > 0) {
-            for (let cat in categories) {
-                const amount = categories[cat];
-                const percentage = ((amount / totalAmount) * 100).toFixed(1);
-                const colorClass = elementId.includes('income') ? "text-success" : "text-danger";
-                body.innerHTML += `
-                    <tr>
-                        <td><strong>${cat}</strong></td>
-                        <td class="text-end fw-bold ${colorClass}">Rp ${amount.toLocaleString('id-ID')}</td>
-                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
-                    </tr>`;
-            }
-        } else {
-            body.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">${emptyMessage}</td></tr>`;
-        }
+        
+        document.getElementById('addonSection').style.display = showAddonSection ? 'block' : 'none';
     }
 
     function buatKartuAddonHTML(title, value, iconClass, isRed = false) {
@@ -494,87 +517,36 @@
         return new Date(val);
     }
 
-    // 🌟 JURUS SAKTI BARU: EKSPOR LAPORAN KE EXCEL (XLS) TANPA LIBRARY PIHAK KETIGA
+    // 🌟 FITUR DOWNLOAD EXCEL INSTAN DARI FRONTEND PWA
     function exportToExcel() {
-        const [year, month] = monthPicker.value.split('-');
-        const fileName = `Laporan_CashFlow_${month}_${year}.xls`;
+        const startVal = startDateInput.value;
+        const endVal = endDateInput.value;
+        const filename = `Laporan_Cashflow_${clientToken.toUpperCase()}_${startVal}_to_${endVal}.xls`;
 
-        let excelTemplate = `
+        let htmlTable = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <!--[if gte mso 9]>
-                <xml>
-                    <x:ExcelWorkbook>
-                        <x:ExcelWorksheets>
-                            <x:ExcelWorksheet>
-                                <x:Name>Report Detail</x:Name>
-                                <x:WorksheetOptions>
-                                    <x:DisplayGridlines/>
-                                </x:WorksheetOptions>
-                            </x:ExcelWorksheet>
-                        </x:ExcelWorksheets>
-                    </x:ExcelWorkbook>
-                </xml>
-                <![endif]-->
-                <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; }
-                    table { border-collapse: collapse; width: 100%; }
-                    th { background-color: #2d3436; color: white; font-weight: bold; border: 1px solid #cbd5e1; padding: 10px; }
-                    td { border: 1px solid #cbd5e1; padding: 8px; }
-                    .header-title { font-size: 16pt; font-weight: bold; text-align: center; padding: 15px 0; }
-                    .text-right { text-align: right; }
-                    .text-center { text-align: center; }
-                    .text-success { color: #27ae60; font-weight: bold; }
-                    .text-danger { color: #c0392b; font-weight: bold; }
-                </style>
-            </head>
+            <head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Report Detail</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
             <body>
-                <div class="header-title">LAPORAN KAS MASUK & KELUAR - ${clientToken.toUpperCase()} (${month}/${year})</div>
-                
-                <h3>I. EXECUTIVE SUMMARY</h3>
-                <table>
-                    <tr>
-                        <th>TOTAL KAS MASUK (GROSS)</th>
-                        <th>TOTAL KAS KELUAR (EXPENSES)</th>
-                        <th>LABA BERSIH (NET PROFIT)</th>
-                    </tr>
-                    <tr>
-                        <td class="text-center text-success">${document.getElementById('valKasMasuk').innerText}</td>
-                        <td class="text-center text-danger">${document.getElementById('valKasKeluar').innerText}</td>
-                        <td class="text-center" style="font-weight: bold; background-color: #e2f0d9;">${document.getElementById('valLabaBersih').innerText}</td>
-                    </tr>
-                </table>
+                <h2>AMS PRO - LAPORAN KEUANGAN KLIEN (${clientToken.toUpperCase()})</h2>
+                <p>Periode: ${startVal} s/d ${endVal}</p>
                 <br>
-
-                <h3>II. UNIT-BY-UNIT CONSOLIDATED LEDGER</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Unit Motor / Plat Nomor</th>
-                            <th class="text-right">Pemasukan</th>
-                            <th class="text-right">Pengeluaran</th>
-                            <th class="text-right">Jumlah Pokok (HPP)</th>
-                            <th class="text-right">Laba Bersih</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${document.getElementById('ledgerBody').innerHTML}
-                    </tbody>
+                ${document.getElementById('timelineTable') ? document.getElementById('timelineTable').outerHTML : ''}
+                <br>
+                <h3>BUKU KAS LEDGER</h3>
+                <table border="1">
+                    ${document.getElementById('ledgerBody').parentNode.innerHTML}
                 </table>
             </body>
             </html>
         `;
 
-        // Ubah struktur string menjadi Blob biner Excel
-        const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 </script>
 </body>
