@@ -35,7 +35,7 @@
             </div>
             
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <!-- 🌟 BARU: Penyaring Unit Motor (Plat Nomor) -->
+                <!-- Dropdown Pilihan Unit Motor -->
                 <select id="unitFilter" class="form-select form-select-sm bg-light fw-bold" style="width: 140px; cursor: pointer;">
                     <option value="all">ALL UNITS</option>
                 </select>
@@ -44,6 +44,9 @@
                 <input type="month" id="monthPicker" class="form-control form-control-sm bg-light fw-bold" style="width: 150px; cursor: pointer;">
                 <button onclick="changeMonth(1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-right"></i></button>
                 <button onclick="refreshData()" class="btn btn-warning btn-sm fw-bold ms-2"><i class="fas fa-sync-alt"></i></button>
+                
+                <!-- 🌟 BARU: Tombol Download Ekspor Laporan Excel -->
+                <button onclick="exportToExcel()" class="btn btn-success btn-sm fw-bold ms-1" title="Unduh Laporan Excel"><i class="fas fa-file-excel"></i> EXPORT</button>
             </div>
         </div>
 
@@ -70,14 +73,14 @@
                     <div class="card stat-card bg-expense p-4 shadow-sm">
                         <small class="text-white-50 fw-bold uppercase">TOTAL KAS KELUAR (EXPENSES)</small>
                         <h2 class="fw-bold mt-2" id="valKasKeluar">IDR 0</h2>
-                        <small class="text-white-50">Service, Oli, Pengeluaran Kantor</small>
+                        <small class="text-white-50">Service, Oli, Pengeluaran Kantor & Pokok</small>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card stat-card bg-profit p-4 shadow-sm">
                         <small class="text-white-50 fw-bold uppercase">LABA BERSIH (NET PROFIT)</small>
                         <h2 class="fw-bold mt-2" id="valLabaBersih">IDR 0</h2>
-                        <small class="text-white-50">Kas Masuk dikurangi Kas Keluar & Modal</small>
+                        <small class="text-white-50">Kas Masuk dikurangi Pengeluaran & Pokok</small>
                     </div>
                 </div>
             </div>
@@ -87,7 +90,7 @@
                 <div class="col-lg-6">
                     <div class="section-title"><i class="fas fa-arrow-circle-down text-success"></i> Income Sources</div>
                     <div class="table-responsive bg-light p-3 rounded-3 border">
-                        <table class="table table-hover table-custom m-0">
+                        <table class="table table-hover table-custom m-0" id="tableIncome">
                             <thead>
                                 <tr>
                                     <th>Income Category</th>
@@ -105,7 +108,7 @@
                 <div class="col-lg-6">
                     <div class="section-title"><i class="fas fa-arrow-circle-up text-danger"></i> Expense Categories</div>
                     <div class="table-responsive bg-light p-3 rounded-3 border">
-                        <table class="table table-hover table-custom m-0">
+                        <table class="table table-hover table-custom m-0" id="tableExpense">
                             <thead>
                                 <tr>
                                     <th>Expense Category</th>
@@ -122,21 +125,24 @@
             </div>
 
             <!-- 2.5 SUMBER PENDAPATAN ADD-ONS (KARTU DINAMIS) -->
-            <div class="section-title"><i class="fas fa-tags text-warning"></i> Add-on & Services Revenue (Itemized)</div>
-            <div class="row g-3 mb-5" id="addonRevenueContainer">
-                <!-- Kartu Pendapatan tambahan asuransi dll akan di-render dinamis oleh JS di sini -->
+            <div id="addonSection" style="display: none;">
+                <div class="section-title"><i class="fas fa-tags text-warning"></i> Add-on & Services Revenue (Itemized)</div>
+                <div class="row g-3 mb-5" id="addonRevenueContainer">
+                    <!-- Kartu Pendapatan tambahan asuransi dll akan di-render dinamis oleh JS di sini -->
+                </div>
             </div>
 
             <!-- 3. BUKU KAS LEDGER DIGITAL -->
-            <div class="section-title"><i class="fas fa-history text-warning"></i> Recent CashFlow Ledger</div>
+            <div class="section-title"><i class="fas fa-history text-warning"></i> Unit-by-Unit Financial Ledger</div>
             <div class="table-responsive bg-light p-3 rounded-3 border" style="max-height: 450px; overflow-y: auto;">
-                <table class="table table-hover table-custom m-0">
+                <table class="table table-hover table-custom m-0" id="tableLedger">
                     <thead>
                         <tr>
-                            <th style="width: 15%;">Type / Date</th>
-                            <th style="width: 25%;">Category</th>
-                            <th style="width: 40%;">Notes (Description)</th>
-                            <th style="width: 20%;" class="text-end">Amount</th>
+                            <th>Unit Motor</th>
+                            <th class="text-end">Pemasukan</th>
+                            <th class="text-end">Pengeluaran</th>
+                            <th class="text-end">Jumlah Pokok (HPP)</th>
+                            <th class="text-end">Laba Bersih Unit</th>
                         </tr>
                     </thead>
                     <tbody id="ledgerBody">
@@ -149,7 +155,6 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const params = new URLSearchParams(window.location.search);
     const clientToken = params.get('token') || 'mrd';
@@ -243,7 +248,7 @@
         let totalKasMasuk = 0;
         let totalKasKeluar = 0;
 
-        // Penampung data add-ons dinamis
+        // Penampung data add-ons dinamis dari Register (Sewa/Bookings)
         let totalBaseRental = 0;
         let totalDiscount = 0;
         let totalInsurance = 0;
@@ -251,118 +256,110 @@
         let totalHolder = 0;
         let totalDelivery = 0;
         let totalAdditional = 0;
-        
-        // 🌟 BREADOWN BARU: Jumlah Pokok (HPP / Modal Klien bbt)
-        let totalJumlahPokok = 0;
 
         let incomeCategories = {};
         let expenseCategories = {};
         
-        const ledgerBody = document.getElementById('ledgerBody');
-        ledgerBody.innerHTML = "";
+        let unitLedgerMap = {}; // { 'dk1234': { pemasukan: 0, pengeluaran: 0, pokok: 0 } }
+
+        // Inisialisasi map seluruh motor agar tetap tampil di ledger meskipun transaksinya 0
+        motors.forEach(m => {
+            const plat = String(m[0]).toLowerCase().trim().replace(/\s/g, "");
+            unitLedgerMap[plat] = {
+                platAsli: String(m[0]).toUpperCase(),
+                tipe: m[1],
+                brand: m[2],
+                pemasukan: 0,
+                pengeluaran: 0,
+                pokok: 0
+            };
+        });
 
         // --------------------------------------------------------
-        // 1. FILTER & HITUNG TRANSAKSI REGISTER (PENDAPATAN DETAIL)
+        // 1. FILTER & HITUNG TRANSAKSI REGISTER (ADD-ONS & POKOK/HPP)
         // --------------------------------------------------------
         bookings.forEach(b => {
             const bStatus = b.status ? b.status.toLowerCase() : "";
             if (bStatus.includes("cancel")) return; 
 
-            // Filter Berdasarkan Plat Motor jika dipilih
             const motorPlat = b.no_motor ? b.no_motor.toLowerCase().replace(/\s/g, "") : "";
-            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return;
-
             const bStart = new Date(b.start);
             if (bStart.getFullYear() !== targetYear || bStart.getMonth() !== targetMonthIndex) return;
 
+            // Hitung Add-ons Kumulatif
             const basePrice = parseInt(b.harga) || 0;
             const duration = parseInt(b["jml hari"] || b["jml_hari"]) || 1;
             const discountVal = parseInt(b.diskon) || 0;
             
-            totalBaseRental += (basePrice * duration);
-            totalDiscount += discountVal;
+            // Tambahkan ke variabel global jika unit cocok dengan filter
+            if (selectedUnit === "all" || motorPlat === selectedUnit) {
+                totalBaseRental += (basePrice * duration);
+                totalDiscount += discountVal;
 
-            // 🌟 HITUNG POKOK KLIEN bbt (HPP): Jumlah Pokok / Pokok
-            if (hasColumn("jumlah pokok")) {
-                totalJumlahPokok += (parseInt(b["jumlah pokok"]) || parseInt(b["pokok"]) || 0);
+                if (hasColumn("insurance")) totalInsurance += (parseInt(b.insurance) || 0);
+                if (hasColumn("surface")) totalSurface += (parseInt(b.surface) || 0);
+                if (hasColumn("phone holder")) totalHolder += (parseInt(b["phone holder"] || b["phone_holder"]) || 0);
+                if (hasColumn("delivery")) totalDelivery += (parseInt(b.delivery) || 0);
+                if (hasColumn("additional")) totalAdditional += (parseInt(b.additional) || 0);
             }
 
-            // Akumulasi pendapatan Add-on
-            if (hasColumn("insurance")) totalInsurance += (parseInt(b.insurance) || 0);
-            if (hasColumn("surface")) totalSurface += (parseInt(b.surface) || 0);
-            if (hasColumn("phone holder")) totalHolder += (parseInt(b["phone holder"] || b["phone_holder"]) || 0);
-            if (hasColumn("delivery")) totalDelivery += (parseInt(b.delivery) || 0);
-            if (hasColumn("additional")) totalAdditional += (parseInt(b.additional) || 0);
+            // Catatkan Nilai "Jumlah Pokok" (HPP) ke unit motor bersangkutan secara dinamis
+            if (unitLedgerMap[motorPlat] && hasColumn("jumlah pokok")) {
+                const nilaiPokok = parseInt(b["jumlah pokok"] || b["pokok"] || 0);
+                unitLedgerMap[motorPlat].pokok += nilaiPokok;
+            }
         });
 
         // --------------------------------------------------------
         // 2. FILTER & HITUNG KAS MASUK/KELUAR DARI CASHFLOW SHEET
         // --------------------------------------------------------
-        const filteredCashFlows = cashflows.filter(cf => {
-            if (!cf.tanggal) return false;
-            
-            // Filter Berdasarkan Plat Motor jika dipilih
-            const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
-            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return false;
-
+        cashflows.forEach(cf => {
+            if (!cf.tanggal) return;
             const cfDate = parseKeTanggal(cf.tanggal);
-            return cfDate.getFullYear() === targetYear && cfDate.getMonth() === targetMonthIndex;
-        }).sort((a, b) => parseKeTanggal(b.tanggal) - parseKeTanggal(a.tanggal));
+            if (cfDate.getFullYear() !== targetYear || cfDate.getMonth() !== targetMonthIndex) return;
 
-        if (filteredCashFlows.length > 0) {
-            filteredCashFlows.forEach(cf => {
-                const cfDate = parseKeTanggal(cf.tanggal);
-                const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
-                const amount = parseInt(cf.jumlah) || 0;
-                const category = cf.kategori || "Umum";
-                const dateStr = `${cfDate.getDate()}-${cfDate.getMonth() + 1}-${cfDate.getFullYear()}`;
+            const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
+            const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
+            const amount = parseInt(cf.jumlah) || 0;
+            const category = cf.kategori || "Umum";
 
-                if (type === "masuk") {
-                    totalKasMasuk += amount;
-                    if (!incomeCategories[category]) incomeCategories[category] = 0;
-                    incomeCategories[category] += amount;
+            // Filter Berdasarkan Plat Motor di Header
+            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return;
 
-                    ledgerBody.innerHTML += `
-                        <tr>
-                            <td><span class="badge bg-success">MASUK</span><br><small class="text-muted">${dateStr}</small></td>
-                            <td><strong>${category}</strong></td>
-                            <td>${cf.keterangan || "-"} ${cf.motor ? `(${cf.motor.toUpperCase()})` : ""}</td>
-                            <td class="text-end text-success fw-bold">+Rp ${amount.toLocaleString('id-ID')}</td>
-                        </tr>`;
-                } else if (type === "keluar") {
-                    totalKasKeluar += amount;
-                    if (!expenseCategories[category]) expenseCategories[category] = 0;
-                    expenseCategories[category] += amount;
+            if (type === "masuk") {
+                totalKasMasuk += amount;
+                if (!incomeCategories[category]) incomeCategories[category] = 0;
+                incomeCategories[category] += amount;
 
-                    ledgerBody.innerHTML += `
-                        <tr>
-                            <td><span class="badge bg-danger">KELUAR</span><br><small class="text-muted">${dateStr}</small></td>
-                            <td><strong>${category}</strong></td>
-                            <td>${cf.keterangan || "-"} ${cf.motor ? `(${cf.motor.toUpperCase()})` : ""}</td>
-                            <td class="text-end text-danger fw-bold">-Rp ${amount.toLocaleString('id-ID')}</td>
-                        </tr>`;
+                // Catatkan ke Ledger unit
+                if (unitLedgerMap[motorPlat]) {
+                    unitLedgerMap[motorPlat].pemasukan += amount;
                 }
-            });
-        } else {
-            ledgerBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No cashflow transactions recorded for this month.</td></tr>`;
+            } else if (type === "keluar") {
+                totalKasKeluar += amount;
+                if (!expenseCategories[category]) expenseCategories[category] = 0;
+                expenseCategories[category] += amount;
+
+                // Catatkan ke Ledger unit
+                if (unitLedgerMap[motorPlat]) {
+                    unitLedgerMap[motorPlat].pengeluaran += amount;
+                }
+            }
+        });
+
+        // Akumulasi HPP (Jumlah Pokok) Klien BBT ke dalam Kas Keluar Global
+        let totalJumlahPokokGlobal = 0;
+        for (let plat in unitLedgerMap) {
+            const pVal = unitLedgerMap[plat].pokok;
+            if (selectedUnit === "all" || plat === selectedUnit) {
+                totalJumlahPokokGlobal += pVal;
+            }
         }
 
-        // Jika klien memiliki kolom "Jumlah Pokok" (seperti BBT), tambahkan ke total pengeluaran kumulatif
-        if (hasColumn("jumlah pokok") && totalJumlahPokok > 0) {
-            totalKasKeluar += totalJumlahPokok;
-            
-            // Masukkan "Jumlah Pokok" ke kategori Pengeluaran harian
+        if (hasColumn("jumlah pokok") && totalJumlahPokokGlobal > 0) {
+            totalKasKeluar += totalJumlahPokokGlobal;
             if (!expenseCategories["HPP (Modal Pokok)"]) expenseCategories["HPP (Modal Pokok)"] = 0;
-            expenseCategories["HPP (Modal Pokok)"] += totalJumlahPokok;
-            
-            // Catat di Ledger sebagai catatan tersendiri
-            ledgerBody.innerHTML += `
-                <tr class="table-warning">
-                    <td><span class="badge bg-warning text-dark">HPP</span><br><small class="text-muted">Auto-Split</small></td>
-                    <td><strong>HPP (Modal Pokok)</strong></td>
-                    <td>Sistem: Akumulasi nilai pokok sewa unit motor bulan ini</td>
-                    <td class="text-end text-danger fw-bold">-Rp ${totalJumlahPokok.toLocaleString('id-ID')}</td>
-                </tr>`;
+            expenseCategories["HPP (Modal Pokok)"] += totalJumlahPokokGlobal;
         }
 
         // Tampilkan Summary Executive
@@ -370,66 +367,104 @@
         document.getElementById('valKasKeluar').innerText = `Rp ${totalKasKeluar.toLocaleString('id-ID')}`;
         document.getElementById('valLabaBersih').innerText = `Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}`;
 
-        // RENDER TABEL PENDAPATAN KAS MASUK
-        const incomeCategoryBody = document.getElementById('incomeCategoryBody');
-        incomeCategoryBody.innerHTML = "";
-        if (totalKasMasuk > 0) {
-            for (let cat in incomeCategories) {
-                const amount = incomeCategories[cat];
-                const percentage = ((amount / totalKasMasuk) * 100).toFixed(1);
-                incomeCategoryBody.innerHTML += `
+        // --------------------------------------------------------
+        // 3. RENDER TABEL PENDAPATAN & PENGELUARAN KATEGORI
+        // --------------------------------------------------------
+        renderKategoriTable('incomeCategoryBody', incomeCategories, totalKasMasuk, "No income recorded.");
+        renderKategoriTable('expenseCategoryBody', expenseCategories, totalKasKeluar, "No expenses recorded.");
+
+        // --------------------------------------------------------
+        // 4. RENDER LEDGER DETAIL KONSOLIDASI (SINKRON EXCEL BBT!)
+        // --------------------------------------------------------
+        const ledgerBody = document.getElementById('ledgerBody');
+        ledgerBody.innerHTML = "";
+
+        let hasDataLedger = false;
+        for (let plat in unitLedgerMap) {
+            const u = unitLedgerMap[plat];
+            // Filter Unit terpilih di ledger
+            if (selectedUnit !== "all" && plat !== selectedUnit) continue;
+
+            if (u.pemasukan > 0 || u.pengeluaran > 0 || u.pokok > 0) {
+                hasDataLedger = true;
+                const netUnit = u.pemasukan - u.pengeluaran - u.pokok;
+                const netClass = netUnit >= 0 ? "text-success" : "text-danger";
+
+                ledgerBody.innerHTML += `
                     <tr>
-                        <td><strong>${cat}</strong></td>
-                        <td class="text-end fw-bold text-success">Rp ${amount.toLocaleString('id-ID')}</td>
-                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
+                        <td>
+                            <strong>${u.brand} ${u.tipe}</strong><br>
+                            <small class="text-muted"><i class="fas fa-motorcycle me-1"></i>${u.platAsli}</small>
+                        </td>
+                        <td class="text-end text-success fw-bold">Rp ${u.pemasukan.toLocaleString('id-ID')}</td>
+                        <td class="text-end text-danger fw-bold">Rp ${u.pengeluaran.toLocaleString('id-ID')}</td>
+                        <td class="text-end text-warning fw-bold">Rp ${u.pokok.toLocaleString('id-ID')}</td>
+                        <td class="text-end fw-bold ${netClass}">Rp ${netUnit.toLocaleString('id-ID')}</td>
                     </tr>`;
             }
-        } else {
-            incomeCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No income recorded for this month.</td></tr>`;
         }
 
-        // RENDER TABEL PENGELUARAN KAS KELUAR (TERMASUK HPP JIKA ADA)
-        const expenseCategoryBody = document.getElementById('expenseCategoryBody');
-        expenseCategoryBody.innerHTML = "";
-        if (totalKasKeluar > 0) {
-            for (let cat in expenseCategories) {
-                const amount = expenseCategories[cat];
-                const percentage = ((amount / totalKasKeluar) * 100).toFixed(1);
-                expenseCategoryBody.innerHTML += `
-                    <tr>
-                        <td><strong>${cat}</strong></td>
-                        <td class="text-end fw-bold text-danger">Rp ${amount.toLocaleString('id-ID')}</td>
-                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
-                    </tr>`;
-            }
-        } else {
-            expenseCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No expenses recorded for this month.</td></tr>`;
+        if (!hasDataLedger) {
+            ledgerBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No consolidated transactions found for this selection.</td></tr>`;
         }
 
-        // RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
+        // --------------------------------------------------------
+        // 5. RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
+        // --------------------------------------------------------
+        const addonSection = document.getElementById('addonSection');
         const addonContainer = document.getElementById('addonRevenueContainer');
         addonContainer.innerHTML = "";
+
+        let showAddonSection = false;
 
         addonContainer.innerHTML += buatKartuAddonHTML("Base Rental Income", totalBaseRental, "fas fa-motorcycle");
         addonContainer.innerHTML += buatKartuAddonHTML("Discounts Given", totalDiscount, "fas fa-percentage", true);
 
-        if (hasColumn("jumlah pokok") && totalJumlahPokok > 0) {
-            addonContainer.innerHTML += buatKartuAddonHTML("HPP (Modal Pokok)", totalJumlahPokok, "fas fa-hand-holding-usd", true);
+        if (hasColumn("jumlah pokok") && totalJumlahPokokGlobal > 0) {
+            addonContainer.innerHTML += buatKartuAddonHTML("HPP (Modal Pokok)", totalJumlahPokokGlobal, "fas fa-hand-holding-usd", true);
+            showAddonSection = true;
         }
         if (hasColumn("insurance") && totalInsurance > 0) {
             addonContainer.innerHTML += buatKartuAddonHTML("Insurance Revenue", totalInsurance, "fas fa-shield-alt");
+            showAddonSection = true;
         }
         if (hasColumn("surface") && totalSurface > 0) {
             addonContainer.innerHTML += buatKartuAddonHTML("Surface Cleaning Revenue", totalSurface, "fas fa-soap");
+            showAddonSection = true;
         }
         if (hasColumn("phone holder") && totalHolder > 0) {
             addonContainer.innerHTML += buatKartuAddonHTML("Phone Holder Revenue", totalHolder, "fas fa-mobile-alt");
+            showAddonSection = true;
         }
         if (hasColumn("delivery") && totalDelivery > 0) {
             addonContainer.innerHTML += buatKartuAddonHTML("Delivery Fee Revenue", totalDelivery, "fas fa-truck");
+            showAddonSection = true;
         }
         if (hasColumn("additional") && totalAdditional > 0) {
             addonContainer.innerHTML += buatKartuAddonHTML("Additional Service Revenue", totalAdditional, "fas fa-plus-circle");
+            showAddonSection = true;
+        }
+
+        addonSection.style.display = showAddonSection ? 'block' : 'none';
+    }
+
+    function renderKategoriTable(elementId, categories, totalAmount, emptyMessage) {
+        const body = document.getElementById(elementId);
+        body.innerHTML = "";
+        if (totalAmount > 0) {
+            for (let cat in categories) {
+                const amount = categories[cat];
+                const percentage = ((amount / totalAmount) * 100).toFixed(1);
+                const colorClass = elementId.includes('income') ? "text-success" : "text-danger";
+                body.innerHTML += `
+                    <tr>
+                        <td><strong>${cat}</strong></td>
+                        <td class="text-end fw-bold ${colorClass}">Rp ${amount.toLocaleString('id-ID')}</td>
+                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
+                    </tr>`;
+            }
+        } else {
+            body.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">${emptyMessage}</td></tr>`;
         }
     }
 
@@ -457,6 +492,89 @@
             }
         }
         return new Date(val);
+    }
+
+    // 🌟 JURUS SAKTI BARU: EKSPOR LAPORAN KE EXCEL (XLS) TANPA LIBRARY PIHAK KETIGA
+    function exportToExcel() {
+        const [year, month] = monthPicker.value.split('-');
+        const fileName = `Laporan_CashFlow_${month}_${year}.xls`;
+
+        let excelTemplate = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Report Detail</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; }
+                    table { border-collapse: collapse; width: 100%; }
+                    th { background-color: #2d3436; color: white; font-weight: bold; border: 1px solid #cbd5e1; padding: 10px; }
+                    td { border: 1px solid #cbd5e1; padding: 8px; }
+                    .header-title { font-size: 16pt; font-weight: bold; text-align: center; padding: 15px 0; }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .text-success { color: #27ae60; font-weight: bold; }
+                    .text-danger { color: #c0392b; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <div class="header-title">LAPORAN KAS MASUK & KELUAR - ${clientToken.toUpperCase()} (${month}/${year})</div>
+                
+                <h3>I. EXECUTIVE SUMMARY</h3>
+                <table>
+                    <tr>
+                        <th>TOTAL KAS MASUK (GROSS)</th>
+                        <th>TOTAL KAS KELUAR (EXPENSES)</th>
+                        <th>LABA BERSIH (NET PROFIT)</th>
+                    </tr>
+                    <tr>
+                        <td class="text-center text-success">${document.getElementById('valKasMasuk').innerText}</td>
+                        <td class="text-center text-danger">${document.getElementById('valKasKeluar').innerText}</td>
+                        <td class="text-center" style="font-weight: bold; background-color: #e2f0d9;">${document.getElementById('valLabaBersih').innerText}</td>
+                    </tr>
+                </table>
+                <br>
+
+                <h3>II. UNIT-BY-UNIT CONSOLIDATED LEDGER</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Unit Motor / Plat Nomor</th>
+                            <th class="text-right">Pemasukan</th>
+                            <th class="text-right">Pengeluaran</th>
+                            <th class="text-right">Jumlah Pokok (HPP)</th>
+                            <th class="text-right">Laba Bersih</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${document.getElementById('ledgerBody').innerHTML}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        // Ubah struktur string menjadi Blob biner Excel
+        const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 </script>
 </body>
