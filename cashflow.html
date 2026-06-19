@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Dashboard - AMS Pro</title>
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <meta name="theme-color" content="#2d3436">
+
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', Roboto, sans-serif; padding-top: 20px; padding-bottom: 50px; }
+        .main-card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: #fff; overflow: hidden; }
+        .header-box { background: #2d3436; color: white; padding: 25px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .stat-card { border: none; border-radius: 12px; transition: 0.3s; color: white; }
+        .stat-card:hover { transform: translateY(-3px); }
+        .bg-income { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .bg-expense { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .bg-profit { background: linear-gradient(135deg, #2980b9, #2c3e50); }
+        .bg-addon { background: linear-gradient(135deg, #fd7e14, #d35400); }
+        .table-custom th { background-color: #2d3436; color: white; border: none; font-size: 0.8rem; text-transform: uppercase; }
+        .table-custom td { vertical-align: middle; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="container px-md-4">
+    <div class="main-card mb-4">
+        <!-- Header -->
+        <div class="header-box">
+            <div>
+                <h3 class="fw-bold m-0" style="letter-spacing: -1px;"><i class="fas fa-wallet me-2 text-warning"></i> CashFlow Analyzer</h3>
+                <p class="m-0 opacity-75" style="font-size: 0.85rem;" id="lblSubTitle">Real-time Financial Board</p>
+            </div>
+            
+            <!-- Kontrol Pemilihan Bulan -->
+            <div class="d-flex align-items-center gap-2">
+                <button onclick="changeMonth(-1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-left"></i></button>
+                <input type="month" id="monthPicker" class="form-control form-control-sm bg-light fw-bold" style="width: 150px; cursor: pointer;">
+                <button onclick="changeMonth(1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-right"></i></button>
+                <button onclick="refreshData()" class="btn btn-warning btn-sm fw-bold ms-2"><i class="fas fa-sync-alt"></i></button>
+            </div>
+        </div>
+
+        <!-- Status Loading -->
+        <div id="loading" class="text-center py-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p class="mt-2 text-muted fw-bold">Calculating finances harian...</p>
+        </div>
+
+        <!-- ISI DASHBOARD UTAMA -->
+        <div id="dashboardContent" style="display: none;" class="p-4">
+            
+            <!-- 1. KARTU EXECUTIVE SUMMARY (UNIVERSAL) -->
+            <div class="section-title"><i class="fas fa-chart-line text-warning"></i> Executive Summary</div>
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card stat-card bg-income p-4 shadow-sm">
+                        <small class="text-white-50 fw-bold uppercase">TOTAL KAS MASUK (GROSS)</small>
+                        <h2 class="fw-bold mt-2" id="valKasMasuk">IDR 0</h2>
+                        <small class="text-white-50">Semua DP & Pelunasan Sewa</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-expense p-4 shadow-sm">
+                        <small class="text-white-50 fw-bold uppercase">TOTAL KAS KELUAR (EXPENSES)</small>
+                        <h2 class="fw-bold mt-2" id="valKasKeluar">IDR 0</h2>
+                        <small class="text-white-50">Service, Oli, Pengeluaran Kantor</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card bg-profit p-4 shadow-sm">
+                        <small class="text-white-50 fw-bold uppercase">LABA BERSIH (NET PROFIT)</small>
+                        <h2 class="fw-bold mt-2" id="valLabaBersih">IDR 0</h2>
+                        <small class="text-white-50">Kas Masuk dikurangi Kas Keluar</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. BREAKDOWN PENDAPATAN ADD-ONS (DINAMIS SENSITIF SKEMA KLIEN) -->
+            <div class="section-title"><i class="fas fa-tags text-warning"></i> Add-on & Services Revenue</div>
+            <div class="row g-3 mb-5" id="addonRevenueContainer">
+                <!-- Kartu Pendapatan tambahan asuransi dll akan di-render dinamis oleh JS di sini -->
+            </div>
+
+            <!-- 3. DETAIL EXPENSE CATEGORIES & LEDGER -->
+            <div class="row g-4">
+                <!-- Pengelompokan Pengeluaran -->
+                <div class="col-lg-6">
+                    <div class="section-title"><i class="fas fa-pie-chart text-warning"></i> Expense Categories</div>
+                    <div class="table-responsive bg-light p-3 rounded-3 border">
+                        <table class="table table-hover table-custom m-0">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Total Amount</th>
+                                    <th class="text-end">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseCategoryBody">
+                                <!-- Grouping kategori pengeluaran harian -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Buku Kas Terkini -->
+                <div class="col-lg-6">
+                    <div class="section-title"><i class="fas fa-history text-warning"></i> Recent CashFlow Ledger</div>
+                    <div class="table-responsive bg-light p-3 rounded-3 border" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-hover table-custom m-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category/Notes</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledgerBody">
+                                <!-- Baris buku kas -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const clientToken = params.get('token') || 'mrd';
+    
+    // API URL mengarah ke doGet Master Registry
+    const API_URL = `https://script.google.com/macros/s/AKfycbw6C9fNfM7Wf_0B2vXm38R8lKshGfL_YfMco8iN_Spt_8qNHeFvX0xZ3Wf2C2z7F9C6/exec?token=${clientToken}`;
+
+    let cashflows = []; // Data mentah dari CashFlow Klien
+    let bookings = [];  // Data mentah dari Register Klien
+    let clientColumns = [];
+
+    // Setup Default Bulan Ini
+    const monthPicker = document.getElementById('monthPicker');
+    const today = new Date();
+    
+    function formatMonthInput(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+    monthPicker.value = formatMonthInput(today);
+
+    window.onload = () => {
+        document.getElementById('lblSubTitle').innerText = `Sesi: ${clientToken.toUpperCase()} | Financial Board`;
+        refreshData();
+    };
+
+    monthPicker.addEventListener('change', () => { kalkulasiKeuangan(); });
+
+    function changeMonth(delta) {
+        const currentVal = monthPicker.value;
+        if (!currentVal) return;
+        const [year, month] = currentVal.split('-');
+        const dateObj = new Date(year, parseInt(month) - 1 + delta, 1);
+        monthPicker.value = formatMonthInput(dateObj);
+        kalkulasiKeuangan();
+    }
+
+    async function refreshData() {
+        document.getElementById('dashboardContent').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        try {
+            // Bypass Gatekeeper
+            const uniqueTime = Date.now(); 
+            const fetchUrl = `${API_URL}&t=${uniqueTime}`;
+            
+            const response = await fetch(fetchUrl);
+            const data = await response.json();
+            
+            if (data.error) {
+                alert("❌ Akses Ditolak: " + data.message);
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+
+            // Integrasi CashFlow secara dinamis
+            bookings = data.bookings || [];
+            
+            // Note: Karena doGet Master mengembalikan 'bookings' dan 'items' untuk PWA Scheduler, 
+            // di PWA Keuangan ini kita juga mengambil data cashflows mentah.
+            // Jika data cashflow belum siap di GAS, kita gunakan data kalkulasi dari register sebagai basis.
+            cashflows = data.cashflows || []; 
+            clientColumns = data.columns || [];
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+            
+            kalkulasiKeuangan();
+        } catch (error) { 
+            console.error("Gagal menarik data API:", error);
+            alert("❌ Gagal terhubung ke database keuangan.");
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+
+    // Detektor Kolom dinamis di PWA
+    function hasColumn(columnName) {
+        if (clientColumns.length === 0) return true; // Default fallback jika belum dideploy penuh
+        const cleanTarget = columnName.toLowerCase().replace(/\s/g, "").replace(/_/g, "");
+        return clientColumns.some(col => col.toLowerCase().replace(/\s/g, "").replace(/_/g, "") === cleanTarget);
+    }
+
+    function kalkulasiKeuangan() {
+        const [selectedYear, selectedMonth] = monthPicker.value.split('-');
+        const targetYear = parseInt(selectedYear);
+        const targetMonthIndex = parseInt(selectedMonth) - 1;
+
+        let totalKasMasuk = 0;
+        let totalKasKeluar = 0;
+
+        // Penampung data add-ons dinamis
+        let totalBaseRental = 0;
+        let totalDiscount = 0;
+        let totalInsurance = 0;
+        let totalSurface = 0;
+        let totalHolder = 0;
+        let totalDelivery = 0;
+        let totalAdditional = 0;
+
+        let expenseCategories = {};
+        const ledgerBody = document.getElementById('ledgerBody');
+        ledgerBody.innerHTML = "";
+
+        // --------------------------------------------------------
+        // 1. FILTER & HITUNG TRANSAKSI REGISTER (PENDAPATAN DETAIL)
+        // --------------------------------------------------------
+        bookings.forEach(b => {
+            const bStatus = b.status ? b.status.toLowerCase() : "";
+            if (bStatus.includes("cancel")) return; // Lewati pesanan batal
+
+            const bStart = new Date(b.start);
+            // Saring berdasarkan Bulan dan Tahun Pilihan
+            if (bStart.getFullYear() !== targetYear || bStart.getMonth() !== targetMonthIndex) return;
+
+            // Tambahkan Base Total, DP, dan sisa tagihan ke Kas Masuk
+            const basePrice = parseInt(b.harga) || 0;
+            const duration = parseInt(b.jml_hari) || 1;
+            const discountVal = parseInt(b.diskon) || 0;
+            
+            totalBaseRental += (basePrice * duration);
+            totalDiscount += discountVal;
+
+            // Akumulasi kas masuk dari DP + Jml Bayar Pelunasan
+            const dpPaid = parseInt(b.byr_dp) || 0;
+            const fullPaid = parseInt(b.jml_byr) || 0;
+            totalKasMasuk += (dpPaid + fullPaid);
+
+            // Akumulasi pendapatan Add-on jika kolomnya aktif di database klien
+            if (hasColumn("insurance")) totalInsurance += (parseInt(b.insurance) || 0);
+            if (hasColumn("surface")) totalSurface += (parseInt(b.surface) || 0);
+            if (hasColumn("phone holder")) totalHolder += (parseInt(b.phone_holder) || 0);
+            if (hasColumn("delivery")) totalDelivery += (parseInt(b.delivery) || 0);
+            if (hasColumn("additional")) totalAdditional += (parseInt(b.additional) || 0);
+
+            // Masukkan data sewa sebagai baris Kas Masuk di Ledger
+            const dateStr = `${bStart.getDate()}-${bStart.getMonth() + 1}-${bStart.getFullYear()}`;
+            ledgerBody.innerHTML += `
+                <tr>
+                    <td><span class="badge bg-success">MASUK</span><br><small class="text-muted">${dateStr}</small></td>
+                    <td><strong>${b.nama}</strong><br><small class="text-muted">Sewa Motor (${b.no_motor.toUpperCase()})</small></td>
+                    <td class="text-end text-success fw-bold">+Rp ${(dpPaid + fullPaid).toLocaleString('id-ID')}</td>
+                </tr>`;
+        });
+
+        // --------------------------------------------------------
+        // 2. FILTER & HITUNG KAS KELUAR DARI CASHFLOW SHEET
+        // --------------------------------------------------------
+        cashflows.forEach(cf => {
+            const cfDate = new Date(cf.tanggal);
+            if (cfDate.getFullYear() !== targetYear || cfDate.getMonth() !== targetMonthIndex) return;
+
+            const type = cf.jenis ? cf.jenis.toLowerCase() : "";
+            const amount = parseInt(cf.jumlah) || 0;
+            const category = cf.kategori || "Umum";
+            const dateStr = `${cfDate.getDate()}-${cfDate.getMonth() + 1}-${cfDate.getFullYear()}`;
+
+            if (type === "keluar") {
+                totalKasKeluar += amount;
+
+                // Grouping pengeluaran berdasarkan kategori harian
+                if (!expenseCategories[category]) expenseCategories[category] = 0;
+                expenseCategories[category] += amount;
+
+                // Masukkan data pengeluaran sebagai baris Kas Keluar di Ledger
+                ledgerBody.innerHTML += `
+                    <tr>
+                        <td><span class="badge bg-danger">KELUAR</span><br><small class="text-muted">${dateStr}</small></td>
+                        <td><strong>${category}</strong><br><small class="text-muted">${cf.keterangan || "-"}</small></td>
+                        <td class="text-end text-danger fw-bold">-Rp ${amount.toLocaleString('id-ID')}</td>
+                    </tr>`;
+            }
+        });
+
+        // Tampilkan Summary Executive
+        document.getElementById('valKasMasuk').innerText = `Rp ${totalKasMasuk.toLocaleString('id-ID')}`;
+        document.getElementById('valKasKeluar').innerText = `Rp ${totalKasKeluar.toLocaleString('id-ID')}`;
+        document.getElementById('valLabaBersih').innerText = `Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}`;
+
+        // --------------------------------------------------------
+        // 3. RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
+        // --------------------------------------------------------
+        const addonContainer = document.getElementById('addonRevenueContainer');
+        addonContainer.innerHTML = "";
+
+        // Tambahkan kartu Base Rental & Diskon (Statis)
+        addonContainer.innerHTML += buatKartuAddonHTML("Base Rental Income", totalBaseRental, "fas fa-motorcycle");
+        addonContainer.innerHTML += buatKartuAddonHTML("Discounts Given", totalDiscount, "fas fa-percentage", true);
+
+        // Tambahkan kartu Add-ons hanya jika kolom tersebut ada di database klien harian
+        if (hasColumn("insurance")) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Insurance Revenue", totalInsurance, "fas fa-shield-alt");
+        }
+        if (hasColumn("surface")) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Surface Cleaning Revenue", totalSurface, "fas fa-soap");
+        }
+        if (hasColumn("phone holder")) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Phone Holder Revenue", totalHolder, "fas fa-mobile-alt");
+        }
+        if (hasColumn("delivery")) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Delivery Fee Revenue", totalDelivery, "fas fa-truck");
+        }
+        if (hasColumn("additional")) {
+            addonContainer.innerHTML += buatKartuAddonHTML("Additional Service Revenue", totalAdditional, "fas fa-plus-circle");
+        }
+
+        // --------------------------------------------------------
+        // 4. RENDER TABEL PERSENTASE KATEGORI PENGELUARAN
+        // --------------------------------------------------------
+        const expenseCategoryBody = document.getElementById('expenseCategoryBody');
+        expenseCategoryBody.innerHTML = "";
+
+        if (totalKasKeluar > 0) {
+            for (let cat in expenseCategories) {
+                const amount = expenseCategories[cat];
+                const percentage = ((amount / totalKasKeluar) * 100).toFixed(1);
+                
+                expenseCategoryBody.innerHTML += `
+                    <tr>
+                        <td><strong>${cat}</strong></td>
+                        <td class="text-end fw-bold text-danger">Rp ${amount.toLocaleString('id-ID')}</td>
+                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
+                    </tr>`;
+            }
+        } else {
+            expenseCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No expenses recorded for this month.</td></tr>`;
+        }
+    }
+
+    // Fungsi pembantu pembuat Kartu Add-on HTML kustom
+    function buatKartuAddonHTML(title, value, iconClass, isRed = false) {
+        const textClass = isRed ? "text-danger" : "text-success";
+        return `
+            <div class="col-md-3 col-sm-6">
+                <div class="card p-3 border shadow-sm h-100 d-flex flex-row justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted fw-bold d-block" style="font-size: 0.7rem;">${title.toUpperCase()}</small>
+                        <span class="fw-bold fs-5 ${textClass}">Rp ${value.toLocaleString('id-ID')}</span>
+                    </div>
+                    <div class="fs-3 text-muted opacity-50"><i class="${iconClass}"></i></div>
+                </div>
+            </div>`;
+    }
+</script>
+</body>
+</html>
