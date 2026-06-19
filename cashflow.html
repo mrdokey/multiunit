@@ -35,6 +35,7 @@
             </div>
             
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Dropdown Pilihan Unit Motor -->
                 <select id="unitFilter" class="form-select form-select-sm bg-light fw-bold" style="width: 130px; cursor: pointer;">
                     <option value="all">ALL UNITS</option>
                 </select>
@@ -107,7 +108,7 @@
                     </div>
                 </div>
 
-                <!-- 🌟 Sektor B BARU: Pembagian Kas Masuk Per Metode Pembayaran (BCA, BRI, Mandiri, Cash, dll) -->
+                <!-- Sektor B: Pembagian Kas Masuk Per Metode Pembayaran (Bank/Cash) -->
                 <div class="col-lg-4">
                     <div class="section-title"><i class="fas fa-credit-card text-primary"></i> Income by Payment Method</div>
                     <div class="table-responsive bg-light p-3 rounded-3 border">
@@ -184,6 +185,13 @@
     let motors = [];
     let clientColumns = [];
     let cashflowColumns = []; // Daftar nama kolom riil dari sheet Cashflow klien
+
+    // 🌟 DAFTAR HITAM: Kolom yang tidak boleh ikut ditampilkan harian di tabel (seperti gambar/SVG/internal)
+    const KOLOM_DIABAIKAN = [
+        "lapbul", "foto", "gambar", "image", "foto motor", "foto_motor", 
+        "logo", "avatar", "status_wa", "status kalender", "send wa", 
+        "no register", "no_register", "app_id", "app_key", "appsheet_id", "appsheet_key"
+    ];
 
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
@@ -268,6 +276,7 @@
 
         if (!startVal || !endVal) return;
 
+        // Set Rentang Tanggal Pencarian Murni (Tengah Malam s/d Akhir Hari)
         const dStart = new Date(startVal); dStart.setHours(0,0,0,0);
         const dEnd = new Date(endVal); dEnd.setHours(23,59,59,999);
 
@@ -289,7 +298,22 @@
 
         let incomeCategories = {};
         let expenseCategories = {};
-        let paymentMethods = {}; // 🌟 PEMBAGIAN KAS MASUK PER BANK/METODE BAYAR
+        let paymentMethods = {}; 
+
+        let unitLedgerMap = {}; 
+
+        // Inisialisasi map seluruh motor
+        motors.forEach(m => {
+            const plat = String(m[0]).toLowerCase().trim().replace(/\s/g, "");
+            unitLedgerMap[plat] = {
+                platAsli: String(m[0]).toUpperCase(),
+                tipe: m[1],
+                brand: m[2],
+                pemasukan: 0,
+                pengeluaran: 0,
+                pokok: 0
+            };
+        });
 
         // --------------------------------------------------------
         // 1. FILTER & HITUNG TRANSAKSI REGISTER (ADD-ONS & POKOK/HPP & PAYMENT SPLIT)
@@ -319,11 +343,10 @@
             const nilaiPokok = parseInt(b["jumlah pokok"] || b["pokok"] || 0);
             totalJumlahPokokGlobal += nilaiPokok;
 
-            // 🌟 HITUNG PEMBAGIAN KAS MASUK PER BANK/METODE BAYAR DINAMIS
+            // HITUNG PEMBAGIAN KAS MASUK PER BANK/METODE BAYAR DINAMIS
             const rawMethod = b.payment || b.payment_method || "Belum Diisi";
             const cleanMethod = rawMethod.trim().toUpperCase();
             
-            // Pembayaran riil terhitung dari DP + Jml Bayar
             const amountPaid = (parseInt(b.byr_dp) || 0) + (parseInt(b.jml_byr) || 0);
             
             if (amountPaid > 0) {
@@ -343,12 +366,15 @@
         // 2. FILTER & HITUNG KAS MASUK/KELUAR DARI CASHFLOW SHEET
         // --------------------------------------------------------
         const filteredCashFlows = cashflows.filter(cf => {
-            if (!cf.tanggal) return false;
+            const cfDateStr = cf.tanggal ? cf.tanggal.trim() : "";
             
+            // 🌟 BYPASS PENYARINGAN TANGGAL UNTUK SPREADSHEET KONSOLIDASI (SEPERTI BBT YANG TIDAK MEMILIKI KOLOM TANGGAL)
+            if (cfDateStr === "") return true; 
+
+            const cfDate = parseKeTanggal(cfDateStr);
             const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
             if (selectedUnit !== "all" && motorPlat !== selectedUnit) return false;
 
-            const cfDate = parseKeTanggal(cf.tanggal);
             return cfDate >= dStart && cfDate <= dEnd;
         });
 
@@ -356,26 +382,44 @@
             const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
             const amount = cf.pemasukan || cf.pengeluaran || cf.jumlah || 0; 
             const category = cf.kategori || "Umum";
+            const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
 
-            if (type === "masuk") {
-                totalKasMasuk += amount;
+            if (type === "masuk" || cf.pemasukan > 0) {
+                const finalAmount = cf.pemasukan || amount;
+                totalKasMasuk += finalAmount;
                 if (!incomeCategories[category]) incomeCategories[category] = 0;
-                incomeCategories[category] += amount;
-            } else if (type === "keluar") {
-                totalKasKeluar += amount;
+                incomeCategories[category] += finalAmount;
+
+                if (unitLedgerMap[motorPlat]) {
+                    unitLedgerMap[motorPlat].pemasukan += finalAmount;
+                }
+            } else if (type === "keluar" || cf.pengeluaran > 0) {
+                const finalAmount = cf.pengeluaran || amount;
+                totalKasKeluar += finalAmount;
                 if (!expenseCategories[category]) expenseCategories[category] = 0;
-                expenseCategories[category] += amount;
+                expenseCategories[category] += finalAmount;
+
+                if (unitLedgerMap[motorPlat]) {
+                    unitLedgerMap[motorPlat].pengeluaran += finalAmount;
+                }
             }
         });
 
-        // Masukkan HPP (Jumlah Pokok) ke Kas Keluar Global
+        // Akumulasi HPP (Jumlah Pokok) Klien BBT ke dalam Kas Keluar Global
+        for (let plat in unitLedgerMap) {
+            const pVal = unitLedgerMap[plat].pokok;
+            if (selectedUnit === "all" || plat === selectedUnit) {
+                totalJumlahPokokGlobal += pVal;
+            }
+        }
+
         if (hasColumn("jumlah pokok") && totalJumlahPokokGlobal > 0) {
             totalKasKeluar += totalJumlahPokokGlobal;
             if (!expenseCategories["HPP (Modal Pokok)"]) expenseCategories["HPP (Modal Pokok)"] = 0;
             expenseCategories["HPP (Modal Pokok)"] += totalJumlahPokokGlobal;
         }
 
-        // Tampilkan Summary Executive (Pemasukan - Pengeluaran - Pokok = Bersih)
+        // Tampilkan Summary Executive
         document.getElementById('valKasMasuk').innerText = `Rp ${totalKasMasuk.toLocaleString('id-ID')}`;
         document.getElementById('valKasKeluar').innerText = `Rp ${totalKasKeluar.toLocaleString('id-ID')}`;
         document.getElementById('valLabaBersih').innerText = `Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}`;
@@ -386,11 +430,11 @@
         // RENDER TABEL PENGELUARAN KAS KELUAR
         renderKategoriTable('expenseCategoryBody', expenseCategories, totalKasKeluar, "No expenses recorded.");
 
-        // 🌟 RENDER TABEL BARU: PEMBAGIAN KAS MASUK PER METODE PEMBAYARAN (BANK/CASH)
+        // RENDER TABEL BARU: PEMBAGIAN KAS MASUK PER METODE PEMBAYARAN (BANK/CASH)
         renderKategoriTable('paymentMethodBody', paymentMethods, totalKasMasuk, "No payments recorded.");
 
         // --------------------------------------------------------
-        // 🌟 3. RENDER GRID DINAMIS TABEL LAPORAN (SINKRON SPREADSHEET KLIEN)
+        // 🌟 3. RENDER GRID DINAMIS TABEL LAPORAN (DILINDUNGI SENSOR BLACKLIST SVG)
         // --------------------------------------------------------
         const ledgerHeader = document.getElementById('ledgerHeader');
         const ledgerBody = document.getElementById('ledgerBody');
@@ -399,9 +443,15 @@
         ledgerBody.innerHTML = "";
 
         if (cashflowColumns.length > 0) {
-            // A. Gambar Header Dinamis
+            // Saring kolom agar tidak memunculkan kolom SVG "LAPBUL" Karbit atau file media lain
+            const cleanColumns = cashflowColumns.filter(col => {
+                const clean = col.toLowerCase().trim();
+                return !KOLOM_DIABAIKAN.includes(clean);
+            });
+
+            // A. Gambar Header Dinamis Sesuai Kolom Bersih
             let trHead = "<tr>";
-            cashflowColumns.forEach(col => {
+            cleanColumns.forEach(col => {
                 trHead += `<th>${col.toUpperCase()}</th>`;
             });
             trHead += "</tr>";
@@ -411,12 +461,16 @@
             if (filteredCashFlows.length > 0) {
                 filteredCashFlows.forEach(cf => {
                     let trRow = "<tr>";
-                    cashflowColumns.forEach(col => {
+                    cleanColumns.forEach(col => {
                         const cleanCol = col.toLowerCase().trim();
                         let cellVal = cf[cleanCol] !== undefined ? cf[cleanCol] : "";
 
-                        // Format otomatis nominal rupiah untuk kolom bernilai angka finansial harian
-                        if (typeof cellVal === 'number' || (!isNaN(cellVal) && cellVal !== "" && 
+                        // Sensor Anti-Biner: Jika nilai sel berisi teks SVG, sembunyikan!
+                        if (String(cellVal).includes("data:image/svg+xml")) {
+                            cellVal = `<span class="badge bg-secondary">SVG Graphic</span>`;
+                        }
+                        // Format otomatis nominal rupiah untuk kolom bernilai angka finansial
+                        else if (typeof cellVal === 'number' || (!isNaN(cellVal) && cellVal !== "" && 
                             ["pemasukan", "pengeluaran", "jumlah pokok", "sewa unit", "pelunasan", "service masuk", "bensin masuk", "overtime", "service keluar", "bensin keluar", "fee keluar", "e money"].includes(cleanCol))) {
                             const num = parseInt(cellVal) || 0;
                             cellVal = "Rp " + num.toLocaleString('id-ID');
@@ -427,7 +481,7 @@
                     ledgerBody.innerHTML += trRow;
                 });
             } else {
-                ledgerBody.innerHTML = `<tr><td colspan="${cashflowColumns.length}" class="text-center text-muted py-4">No consolidated transactions found for this selection.</td></tr>`;
+                ledgerBody.innerHTML = `<tr><td colspan="${cleanColumns.length}" class="text-center text-muted py-4">No consolidated transactions found for this selection.</td></tr>`;
             }
         } else {
             // Fallback sederhana jika skema kolom kosong
