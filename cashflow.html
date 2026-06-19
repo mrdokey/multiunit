@@ -19,13 +19,30 @@
         .bg-income { background: linear-gradient(135deg, #2ecc71, #27ae60); }
         .bg-expense { background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .bg-profit { background: linear-gradient(135deg, #2980b9, #2c3e50); }
-        .table-custom th { background-color: #2d3436; color: white; border: none; font-size: 0.8rem; text-transform: uppercase; }
-        .table-custom td { vertical-align: middle; font-size: 0.9rem; }
+        
+        /* EXCEL PIVOT TABLE STYLING */
+        .table-pivot { width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 0.85rem; }
+        .table-pivot th, .table-pivot td { border: 1px solid #cbd5e1; padding: 8px 12px; vertical-align: middle; white-space: nowrap; }
+        
+        /* Warna Header ala Excel Suhu */
+        .th-unit { background-color: #0000ff !important; color: white; text-align: center; font-weight: bold; }
+        .th-masuk { background-color: #4caf50 !important; color: white; text-align: center; font-weight: bold; }
+        .th-keluar { background-color: #f44336 !important; color: white; text-align: center; font-weight: bold; }
+        .th-laba { background-color: #2c3e50 !important; color: white; text-align: center; font-weight: bold; }
+        
+        .row-nonunit { background-color: #f8f9fa; font-weight: 600; }
+        .row-total { background-color: #e2f0d9; font-weight: 800; font-size: 0.95rem; }
+        .text-right { text-align: right !important; }
+        
+        /* Table Responsive Scrollbar */
+        .table-responsive::-webkit-scrollbar { height: 10px; width: 10px; }
+        .table-responsive::-webkit-scrollbar-track { background: #f1f1f1; }
+        .table-responsive::-webkit-scrollbar-thumb { background: #b2bec3; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container px-md-4">
+<div class="container-fluid px-md-4">
     <div class="main-card mb-4">
         <!-- Header -->
         <div class="header-box">
@@ -36,11 +53,11 @@
             
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <!-- Dropdown Pilihan Unit Motor -->
-                <select id="unitFilter" class="form-select form-select-sm bg-light fw-bold" style="width: 130px; cursor: pointer;">
+                <select id="unitFilter" class="form-select form-select-sm bg-light fw-bold" style="width: 140px; cursor: pointer;">
                     <option value="all">ALL UNITS</option>
                 </select>
                 
-                <!-- Dua Input Tanggal Berjangka -->
+                <!-- Tanggal Berjangka -->
                 <div class="d-flex align-items-center gap-1 bg-light p-1 rounded-3 border">
                     <input type="date" id="startDate" class="form-control form-control-sm border-0 fw-bold" style="width: 125px; cursor: pointer;">
                     <span class="text-dark-50 fw-bold" style="font-size: 0.8rem;">to</span>
@@ -52,119 +69,48 @@
             </div>
         </div>
 
-        <!-- Status Loading -->
         <div id="loading" class="text-center py-5">
             <div class="spinner-border text-warning" role="status"></div>
-            <p class="mt-2 text-muted fw-bold">Calculating finances...</p>
+            <p class="mt-2 text-muted fw-bold">Calculating matrix...</p>
         </div>
 
-        <!-- ISI DASHBOARD UTAMA -->
-        <div id="dashboardContent" style="display: none;" class="p-4">
+        <div id="dashboardContent" style="display: none;" class="p-3 p-md-4">
             
             <!-- 1. KARTU EXECUTIVE SUMMARY -->
-            <div class="section-title"><i class="fas fa-chart-line text-warning"></i> Executive Summary</div>
             <div class="row g-4 mb-5">
                 <div class="col-md-4">
                     <div class="card stat-card bg-income p-4 shadow-sm">
                         <small class="text-white-50 fw-bold uppercase">TOTAL KAS MASUK (GROSS)</small>
                         <h2 class="fw-bold mt-2" id="valKasMasuk">IDR 0</h2>
-                        <small class="text-white-50">Semua DP & Pelunasan Sewa</small>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card stat-card bg-expense p-4 shadow-sm">
                         <small class="text-white-50 fw-bold uppercase">TOTAL KAS KELUAR (EXPENSES)</small>
                         <h2 class="fw-bold mt-2" id="valKasKeluar">IDR 0</h2>
-                        <small class="text-white-50">Service, Oli, Pengeluaran Kantor & Pokok</small>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card stat-card bg-profit p-4 shadow-sm">
                         <small class="text-white-50 fw-bold uppercase">LABA BERSIH (NET PROFIT)</small>
                         <h2 class="fw-bold mt-2" id="valLabaBersih">IDR 0</h2>
-                        <small class="text-white-50">Kas Masuk dikurangi Pengeluaran & Pokok</small>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. BREAKDOWN CATEGORIES -->
-            <div class="row g-4 mb-5">
-                <!-- Sektor A: Pengelompokan Kategori Kas Masuk (Pemasukan) -->
-                <div class="col-lg-4">
-                    <div class="section-title"><i class="fas fa-arrow-circle-down text-success"></i> Income Sources</div>
-                    <div class="table-responsive bg-light p-3 rounded-3 border">
-                        <table class="table table-hover table-custom m-0">
-                            <thead>
-                                <tr>
-                                    <th>Income Category</th>
-                                    <th class="text-end">Total Amount</th>
-                                    <th class="text-end">Percentage</th>
-                                </tr>
-                            </thead>
-                            <tbody id="incomeCategoryBody">
-                                <!-- Grouping kategori pendapatan -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Sektor B: Pembagian Kas Masuk Per Metode Pembayaran (Bank/Cash) -->
-                <div class="col-lg-4">
-                    <div class="section-title"><i class="fas fa-credit-card text-primary"></i> Income by Payment Method</div>
-                    <div class="table-responsive bg-light p-3 rounded-3 border">
-                        <table class="table table-hover table-custom m-0">
-                            <thead>
-                                <tr>
-                                    <th>Payment Method</th>
-                                    <th class="text-end">Total Income</th>
-                                    <th class="text-end">Percentage</th>
-                                </tr>
-                            </thead>
-                            <tbody id="paymentMethodBody">
-                                <!-- Grouping metode pembayaran dinamis -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Sektor C: Pengelompokan Kategori Kas Keluar (Pengeluaran) -->
-                <div class="col-lg-4">
-                    <div class="section-title"><i class="fas fa-arrow-circle-up text-danger"></i> Expense Categories</div>
-                    <div class="table-responsive bg-light p-3 rounded-3 border">
-                        <table class="table table-hover table-custom m-0">
-                            <thead>
-                                <tr>
-                                    <th>Expense Category</th>
-                                    <th class="text-end">Total Amount</th>
-                                    <th class="text-end">Percentage</th>
-                                </tr>
-                            </thead>
-                            <tbody id="expenseCategoryBody">
-                                <!-- Grouping kategori pengeluaran -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2.5 SUMBER PENDAPATAN ADD-ONS (KARTU DINAMIS) -->
-            <div id="addonSection" style="display: none;">
-                <div class="section-title"><i class="fas fa-tags text-warning"></i> Add-on & Services Revenue (Itemized)</div>
-                <div class="row g-3 mb-5" id="addonRevenueContainer">
-                    <!-- Kartu Pendapatan tambahan asuransi dll akan di-render dinamis oleh JS di sini -->
-                </div>
-            </div>
-
-            <!-- 3. BUKU KAS LEDGER DIGITAL (RENDER GRID DINAMIS SESUAI SHEET KLIEN) -->
-            <div class="section-title"><i class="fas fa-history text-warning"></i> Consolidated Report Ledger</div>
-            <div class="table-responsive bg-light p-3 rounded-3 border" style="max-height: 500px; overflow-y: auto;">
-                <table class="table table-hover table-custom m-0">
-                    <thead id="ledgerHeader">
-                        <!-- Th nama kolom akan digambar dinamis -->
+            <!-- 2. EXCEL PIVOT TABLE (REPORT DETAIL DINAMIS) -->
+            <div class="section-title fw-bold text-dark mb-3"><i class="fas fa-table text-primary me-2"></i> Report Detail (Excel View)</div>
+            <div class="table-responsive bg-white rounded-3 border shadow-sm pb-2">
+                <table class="table-pivot" id="excelPivotTable">
+                    <thead id="pivotHeader">
+                        <!-- Header akan dirender dinamis -->
                     </thead>
-                    <tbody id="ledgerBody">
-                        <!-- Td isi sel akan digambar dinamis -->
+                    <tbody id="pivotBody">
+                        <!-- Baris akan dirender dinamis -->
                     </tbody>
+                    <tfoot id="pivotFooter">
+                        <!-- Total akan dirender dinamis -->
+                    </tfoot>
                 </table>
             </div>
 
@@ -177,28 +123,17 @@
     const params = new URLSearchParams(window.location.search);
     const clientToken = params.get('token') || 'mrd';
     
-    // URL GAS MASTER UTAMA TERBARU (q4YBHk/exec)
+    // GANTI JIKA PERLU DENGAN URL GAS MASTER TERBARU SUHU
     const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${clientToken}`;
 
     let cashflows = []; 
-    let bookings = [];  
     let motors = [];
-    let clientColumns = [];
-    let cashflowColumns = []; // Daftar nama kolom riil dari sheet Cashflow klien
-
-    // 🌟 DAFTAR HITAM: Kolom yang tidak boleh ikut ditampilkan harian di tabel (seperti gambar/SVG/internal)
-    const KOLOM_DIABAIKAN = [
-        "lapbul", "foto", "gambar", "image", "foto motor", "foto_motor", 
-        "logo", "avatar", "status_wa", "status kalender", "send wa", 
-        "no register", "no_register", "app_id", "app_key", "appsheet_id", "appsheet_key"
-    ];
 
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
     const unitFilter = document.getElementById('unitFilter');
     const today = new Date();
     
-    // Set default range tanggal: Hari pertama s/d hari terakhir bulan berjalan
     window.onload = () => {
         document.getElementById('lblSubTitle').innerText = `Sesi: ${clientToken.toUpperCase()} | Financial Board`;
         
@@ -218,15 +153,14 @@
         return `${y}-${m}-${d}`;
     }
 
-    startDateInput.addEventListener('change', kalkulasiKeuangan);
-    endDateInput.addEventListener('change', kalkulasiKeuangan);
-    unitFilter.addEventListener('change', kalkulasiKeuangan);
+    startDateInput.addEventListener('change', kalkulasiPivot);
+    endDateInput.addEventListener('change', kalkulasiPivot);
+    unitFilter.addEventListener('change', kalkulasiPivot);
 
     async function refreshData() {
         document.getElementById('dashboardContent').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
         try {
-            // Bypass Gatekeeper
             const uniqueTime = Date.now(); 
             const fetchUrl = `${API_URL}&t=${uniqueTime}`;
             
@@ -240,12 +174,9 @@
             }
 
             motors = data.items || [];
-            bookings = data.bookings || [];
             cashflows = data.cashflows || []; 
-            clientColumns = data.columns || [];
-            cashflowColumns = data.cashflowColumns || []; // Tangkap nama kolom riil Cashflow
 
-            // Inisialisasi Filter Unit Motor di Header
+            // Isi Dropdown Filter
             const filterSelect = document.getElementById('unitFilter');
             filterSelect.innerHTML = `<option value="all">ALL UNITS</option>`;
             motors.forEach(m => {
@@ -256,315 +187,18 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboardContent').style.display = 'block';
             
-            kalkulasiKeuangan();
+            kalkulasiPivot();
         } catch (error) { 
-            console.error("Gagal menarik data API:", error);
-            alert("❌ Gagal terhubung ke database keuangan.");
+            console.error(error);
+            alert("❌ Gagal terhubung ke database.");
             document.getElementById('loading').style.display = 'none';
         }
     }
 
-    function hasColumn(columnName) {
-        if (clientColumns.length === 0) return true; 
-        const cleanTarget = columnName.toLowerCase().replace(/\s/g, "").replace(/_/g, "");
-        return clientColumns.some(col => col.toLowerCase().replace(/\s/g, "").replace(/_/g, "") === cleanTarget);
-    }
-
-    function kalkulasiKeuangan() {
-        const startVal = startDateInput.value;
-        const endVal = endDateInput.value;
-
-        if (!startVal || !endVal) return;
-
-        // Set Rentang Tanggal Pencarian Murni (Tengah Malam s/d Akhir Hari)
-        const dStart = new Date(startVal); dStart.setHours(0,0,0,0);
-        const dEnd = new Date(endVal); dEnd.setHours(23,59,59,999);
-
-        const selectedUnit = document.getElementById('unitFilter').value.toLowerCase().replace(/\s/g, "");
-
-        let totalKasMasuk = 0;
-        let totalKasKeluar = 0;
-
-        // Penampung data add-ons dinamis dari Register (Sewa/Bookings)
-        let totalBaseRental = 0;
-        let totalDiscount = 0;
-        let totalInsurance = 0;
-        let totalSurface = 0;
-        let totalHolder = 0;
-        let totalDelivery = 0;
-        let totalAdditional = 0;
-        
-        let totalJumlahPokokGlobal = 0;
-
-        let incomeCategories = {};
-        let expenseCategories = {};
-        let paymentMethods = {}; 
-
-        let unitLedgerMap = {}; 
-
-        // Inisialisasi map seluruh motor
-        motors.forEach(m => {
-            const plat = String(m[0]).toLowerCase().trim().replace(/\s/g, "");
-            unitLedgerMap[plat] = {
-                platAsli: String(m[0]).toUpperCase(),
-                tipe: m[1],
-                brand: m[2],
-                pemasukan: 0,
-                pengeluaran: 0,
-                pokok: 0
-            };
-        });
-
-        // --------------------------------------------------------
-        // 1. FILTER & HITUNG TRANSAKSI REGISTER (ADD-ONS & POKOK/HPP & PAYMENT SPLIT)
-        // --------------------------------------------------------
-        bookings.forEach(b => {
-            const bStatus = b.status ? b.status.toLowerCase() : "";
-            if (bStatus.includes("cancel")) return; 
-
-            const motorPlat = b.no_motor ? b.no_motor.toLowerCase().replace(/\s/g, "") : "";
-            const bStart = new Date(b.start);
-            
-            // Saring berdasarkan rentang tanggal
-            if (bStart < dStart || bStart > dEnd) return;
-
-            // Filter Berdasarkan Plat Motor di Header
-            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return;
-
-            // Hitung Add-ons Kumulatif
-            const basePrice = parseInt(b.harga) || 0;
-            const duration = parseInt(b.jml_hari || b["jml hari"]) || 1;
-            const discountVal = parseInt(b.diskon) || 0;
-            
-            totalBaseRental += (basePrice * duration);
-            totalDiscount += discountVal;
-
-            // Hitung HPP (Modal Pokok) secara dinamis
-            const nilaiPokok = parseInt(b["jumlah pokok"] || b["pokok"] || 0);
-            totalJumlahPokokGlobal += nilaiPokok;
-
-            // HITUNG PEMBAGIAN KAS MASUK PER BANK/METODE BAYAR DINAMIS
-            const rawMethod = b.payment || b.payment_method || "Belum Diisi";
-            const cleanMethod = rawMethod.trim().toUpperCase();
-            
-            const amountPaid = (parseInt(b.byr_dp) || 0) + (parseInt(b.jml_byr) || 0);
-            
-            if (amountPaid > 0) {
-                if (!paymentMethods[cleanMethod]) paymentMethods[cleanMethod] = 0;
-                paymentMethods[cleanMethod] += amountPaid;
-            }
-
-            // Akumulasi pendapatan Add-on
-            if (hasColumn("insurance")) totalInsurance += (parseInt(b.insurance) || 0);
-            if (hasColumn("surface")) totalSurface += (parseInt(b.surface) || 0);
-            if (hasColumn("phone holder")) totalHolder += (parseInt(b["phone holder"] || b["phone_holder"]) || 0);
-            if (hasColumn("delivery")) totalDelivery += (parseInt(b.delivery) || 0);
-            if (hasColumn("additional")) totalAdditional += (parseInt(b.additional) || 0);
-        });
-
-        // --------------------------------------------------------
-        // 2. FILTER & HITUNG KAS MASUK/KELUAR DARI CASHFLOW SHEET
-        // --------------------------------------------------------
-        const filteredCashFlows = cashflows.filter(cf => {
-            const cfDateStr = cf.tanggal ? cf.tanggal.trim() : "";
-            
-            // 🌟 BYPASS PENYARINGAN TANGGAL UNTUK SPREADSHEET KONSOLIDASI (SEPERTI BBT YANG TIDAK MEMILIKI KOLOM TANGGAL)
-            if (cfDateStr === "") return true; 
-
-            const cfDate = parseKeTanggal(cfDateStr);
-            const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
-            if (selectedUnit !== "all" && motorPlat !== selectedUnit) return false;
-
-            return cfDate >= dStart && cfDate <= dEnd;
-        });
-
-        filteredCashFlows.forEach(cf => {
-            const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
-            const amount = cf.pemasukan || cf.pengeluaran || cf.jumlah || 0; 
-            const category = cf.kategori || "Umum";
-            const motorPlat = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
-
-            if (type === "masuk" || cf.pemasukan > 0) {
-                const finalAmount = cf.pemasukan || amount;
-                totalKasMasuk += finalAmount;
-                if (!incomeCategories[category]) incomeCategories[category] = 0;
-                incomeCategories[category] += finalAmount;
-
-                if (unitLedgerMap[motorPlat]) {
-                    unitLedgerMap[motorPlat].pemasukan += finalAmount;
-                }
-            } else if (type === "keluar" || cf.pengeluaran > 0) {
-                const finalAmount = cf.pengeluaran || amount;
-                totalKasKeluar += finalAmount;
-                if (!expenseCategories[category]) expenseCategories[category] = 0;
-                expenseCategories[category] += finalAmount;
-
-                if (unitLedgerMap[motorPlat]) {
-                    unitLedgerMap[motorPlat].pengeluaran += finalAmount;
-                }
-            }
-        });
-
-        // Akumulasi HPP (Jumlah Pokok) Klien BBT ke dalam Kas Keluar Global
-        for (let plat in unitLedgerMap) {
-            const pVal = unitLedgerMap[plat].pokok;
-            if (selectedUnit === "all" || plat === selectedUnit) {
-                totalJumlahPokokGlobal += pVal;
-            }
-        }
-
-        if (hasColumn("jumlah pokok") && totalJumlahPokokGlobal > 0) {
-            totalKasKeluar += totalJumlahPokokGlobal;
-            if (!expenseCategories["HPP (Modal Pokok)"]) expenseCategories["HPP (Modal Pokok)"] = 0;
-            expenseCategories["HPP (Modal Pokok)"] += totalJumlahPokokGlobal;
-        }
-
-        // Tampilkan Summary Executive
-        document.getElementById('valKasMasuk').innerText = `Rp ${totalKasMasuk.toLocaleString('id-ID')}`;
-        document.getElementById('valKasKeluar').innerText = `Rp ${totalKasKeluar.toLocaleString('id-ID')}`;
-        document.getElementById('valLabaBersih').innerText = `Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}`;
-
-        // RENDER TABEL PENDAPATAN KAS MASUK
-        renderKategoriTable('incomeCategoryBody', incomeCategories, totalKasMasuk, "No income recorded.");
-
-        // RENDER TABEL PENGELUARAN KAS KELUAR
-        renderKategoriTable('expenseCategoryBody', expenseCategories, totalKasKeluar, "No expenses recorded.");
-
-        // RENDER TABEL BARU: PEMBAGIAN KAS MASUK PER METODE PEMBAYARAN (BANK/CASH)
-        renderKategoriTable('paymentMethodBody', paymentMethods, totalKasMasuk, "No payments recorded.");
-
-        // --------------------------------------------------------
-        // 🌟 3. RENDER GRID DINAMIS TABEL LAPORAN (DILINDUNGI SENSOR BLACKLIST SVG)
-        // --------------------------------------------------------
-        const ledgerHeader = document.getElementById('ledgerHeader');
-        const ledgerBody = document.getElementById('ledgerBody');
-        
-        ledgerHeader.innerHTML = "";
-        ledgerBody.innerHTML = "";
-
-        if (cashflowColumns.length > 0) {
-            // Saring kolom agar tidak memunculkan kolom SVG "LAPBUL" Karbit atau file media lain
-            const cleanColumns = cashflowColumns.filter(col => {
-                const clean = col.toLowerCase().trim();
-                return !KOLOM_DIABAIKAN.includes(clean);
-            });
-
-            // A. Gambar Header Dinamis Sesuai Kolom Bersih
-            let trHead = "<tr>";
-            cleanColumns.forEach(col => {
-                trHead += `<th>${col.toUpperCase()}</th>`;
-            });
-            trHead += "</tr>";
-            ledgerHeader.innerHTML = trHead;
-
-            // B. Gambar Baris Data Dinamis
-            if (filteredCashFlows.length > 0) {
-                filteredCashFlows.forEach(cf => {
-                    let trRow = "<tr>";
-                    cleanColumns.forEach(col => {
-                        const cleanCol = col.toLowerCase().trim();
-                        let cellVal = cf[cleanCol] !== undefined ? cf[cleanCol] : "";
-
-                        // Sensor Anti-Biner: Jika nilai sel berisi teks SVG, sembunyikan!
-                        if (String(cellVal).includes("data:image/svg+xml")) {
-                            cellVal = `<span class="badge bg-secondary">SVG Graphic</span>`;
-                        }
-                        // Format otomatis nominal rupiah untuk kolom bernilai angka finansial
-                        else if (typeof cellVal === 'number' || (!isNaN(cellVal) && cellVal !== "" && 
-                            ["pemasukan", "pengeluaran", "jumlah pokok", "sewa unit", "pelunasan", "service masuk", "bensin masuk", "overtime", "service keluar", "bensin keluar", "fee keluar", "e money"].includes(cleanCol))) {
-                            const num = parseInt(cellVal) || 0;
-                            cellVal = "Rp " + num.toLocaleString('id-ID');
-                        }
-                        trRow += `<td>${cellVal}</td>`;
-                    });
-                    trRow += "</tr>";
-                    ledgerBody.innerHTML += trRow;
-                });
-            } else {
-                ledgerBody.innerHTML = `<tr><td colspan="${cleanColumns.length}" class="text-center text-muted py-4">No consolidated transactions found for this selection.</td></tr>`;
-            }
-        } else {
-            // Fallback sederhana jika skema kolom kosong
-            ledgerHeader.innerHTML = `<tr><th>Unit Motor</th><th>Pemasukan</th><th>Pengeluaran</th></tr>`;
-            ledgerBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">Waiting for database synchronization...</td></tr>`;
-        }
-
-        // --------------------------------------------------------
-        // 4. RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
-        // --------------------------------------------------------
-        const addonSection = document.getElementById('addonSection');
-        const addonContainer = document.getElementById('addonRevenueContainer');
-        addonContainer.innerHTML = "";
-
-        let showAddonSection = false;
-
-        addonContainer.innerHTML += buatKartuAddonHTML("Base Rental Income", totalBaseRental, "fas fa-motorcycle");
-        addonContainer.innerHTML += buatKartuAddonHTML("Discounts Given", totalDiscount, "fas fa-percentage", true);
-
-        if (hasColumn("jumlah pokok") && totalJumlahPokokGlobal > 0) {
-            addonContainer.innerHTML += buatKartuAddonHTML("HPP (Modal Pokok)", totalJumlahPokokGlobal, "fas fa-hand-holding-usd", true);
-            showAddonSection = true;
-        }
-        if (hasColumn("insurance") && totalInsurance > 0) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Insurance Revenue", totalInsurance, "fas fa-shield-alt");
-            showAddonSection = true;
-        }
-        if (hasColumn("surface") && totalSurface > 0) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Surface Cleaning Revenue", totalSurface, "fas fa-soap");
-            showAddonSection = true;
-        }
-        if (hasColumn("phone holder") && totalHolder > 0) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Phone Holder Revenue", totalHolder, "fas fa-mobile-alt");
-            showAddonSection = true;
-        }
-        if (hasColumn("delivery") && totalDelivery > 0) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Delivery Fee Revenue", totalDelivery, "fas fa-truck");
-            showAddonSection = true;
-        }
-        if (hasColumn("additional") && totalAdditional > 0) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Additional Service Revenue", totalAdditional, "fas fa-plus-circle");
-            showAddonSection = true;
-        }
-
-        addonSection.style.display = showAddonSection ? 'block' : 'none';
-    }
-
-    function renderKategoriTable(elementId, categories, totalAmount, emptyMessage) {
-        const body = document.getElementById(elementId);
-        body.innerHTML = "";
-        if (totalAmount > 0) {
-            let hasData = false;
-            for (let cat in categories) {
-                const amount = categories[cat];
-                if (amount <= 0) continue;
-                hasData = true;
-                const percentage = ((amount / totalAmount) * 100).toFixed(1);
-                const colorClass = elementId.includes('income') || elementId.includes('payment') ? "text-success" : "text-danger";
-                body.innerHTML += `
-                    <tr>
-                        <td><strong>${cat}</strong></td>
-                        <td class="text-end fw-bold ${colorClass}">Rp ${amount.toLocaleString('id-ID')}</td>
-                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
-                    </tr>`;
-            }
-            if (!hasData) body.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">${emptyMessage}</td></tr>`;
-        } else {
-            body.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-3">${emptyMessage}</td></tr>`;
-        }
-    }
-
-    function buatKartuAddonHTML(title, value, iconClass, isRed = false) {
-        const textClass = isRed ? "text-danger" : "text-success";
-        return `
-            <div class="col-md-3 col-sm-6">
-                <div class="card p-3 border shadow-sm h-100 d-flex flex-row justify-content-between align-items-center">
-                    <div>
-                        <small class="text-muted fw-bold d-block" style="font-size: 0.7rem;">${title.toUpperCase()}</small>
-                        <span class="fw-bold fs-5 ${textClass}">Rp ${value.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div class="fs-3 text-muted opacity-50"><i class="${iconClass}"></i></div>
-                </div>
-            </div>`;
+    // Fungsi Format Rupiah
+    function rp(angka) {
+        if(angka === 0) return "Rp0";
+        return "Rp" + parseInt(angka).toLocaleString('id-ID');
     }
 
     function parseKeTanggal(val) {
@@ -579,42 +213,213 @@
         return new Date(val);
     }
 
-    // 🌟 EKSPOR LAPORAN KE EXCEL (XLS) SESUAI TATA LETAK GRID DINAMIS ASLI SPREADSHEET KLIEN
+    /**
+     * 🌟 CORE ENGINE: DYNAMIC PIVOT TABLE GENERATOR
+     */
+    function kalkulasiPivot() {
+        const startVal = startDateInput.value;
+        const endVal = endDateInput.value;
+        if (!startVal || !endVal) return;
+
+        const dStart = new Date(startVal); dStart.setHours(0,0,0,0);
+        const dEnd = new Date(endVal); dEnd.setHours(23,59,59,999);
+        const selectedUnit = unitFilter.value.toLowerCase().replace(/\s/g, "");
+
+        // 1. FILTER TANGGAL
+        const filteredCashFlows = cashflows.filter(cf => {
+            const cfDateStr = cf.tanggal ? cf.tanggal.trim() : "";
+            if (cfDateStr === "") return true; // Loloskan data tanpa tanggal
+            const cfDate = parseKeTanggal(cfDateStr);
+            return cfDate >= dStart && cfDate <= dEnd;
+        });
+
+        // 2. KUMPULKAN NAMA KATEGORI DINAMIS (HEADER)
+        let incomeHeadersSet = new Set();
+        let expenseHeadersSet = new Set();
+        let hasHppPokok = false;
+
+        filteredCashFlows.forEach(cf => {
+            const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
+            const cat = cf.kategori || "Umum";
+            const pokok = parseInt(cf.jumlah_pokok) || 0;
+
+            if (type === "masuk" || cf.pemasukan > 0) incomeHeadersSet.add(cat);
+            if (type === "keluar" || cf.pengeluaran > 0) expenseHeadersSet.add(cat);
+            if (pokok > 0) hasHppPokok = true;
+        });
+
+        let incHeaders = Array.from(incomeHeadersSet).sort();
+        let expHeaders = Array.from(expenseHeadersSet).sort();
+        
+        // Posisikan Jumlah Pokok/HPP di awal pengeluaran jika ada
+        if (hasHppPokok) {
+            expHeaders = ["Jumlah Pokok", ...expHeaders];
+        }
+
+        // 3. INISIALISASI STRUKTUR DATA PER UNIT
+        let reportMap = {};
+        motors.forEach(m => {
+            const platAsli = String(m[0]).toUpperCase();
+            const platClean = platAsli.toLowerCase().replace(/\s/g, "");
+            reportMap[platClean] = {
+                platAsli: platAsli,
+                tipe: m[1] || "-",
+                totalIn: 0,
+                totalOut: 0,
+                incomes: {},
+                expenses: {}
+            };
+            incHeaders.forEach(h => reportMap[platClean].incomes[h] = 0);
+            expHeaders.forEach(h => reportMap[platClean].expenses[h] = 0);
+        });
+
+        // Tambahkan baris khusus untuk pengeluaran umum (Tanpa Plat Nomor)
+        reportMap["nonunit"] = { platAsli: "Non Unit", tipe: "-", totalIn: 0, totalOut: 0, incomes: {}, expenses: {} };
+        incHeaders.forEach(h => reportMap["nonunit"].incomes[h] = 0);
+        expHeaders.forEach(h => reportMap["nonunit"].expenses[h] = 0);
+
+        // 4. DISTRIBUSI ANGKA KE DALAM MATRIX (PIVOTING)
+        let grandTotalMasuk = 0;
+        let grandTotalKeluar = 0;
+
+        filteredCashFlows.forEach(cf => {
+            const motorRaw = cf.motor ? cf.motor.toLowerCase().replace(/\s/g, "") : "";
+            const targetPlat = reportMap[motorRaw] ? motorRaw : "nonunit";
+            
+            // Filter Unit Dropdown
+            if (selectedUnit !== "all" && targetPlat !== selectedUnit) return;
+
+            const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
+            const cat = cf.kategori || "Umum";
+            const amount = parseInt(cf.pemasukan || cf.pengeluaran || cf.jumlah || 0);
+            const pokok = parseInt(cf.jumlah_pokok || 0);
+
+            // Cabang 1: Pemasukan
+            if (type === "masuk" || cf.pemasukan > 0) {
+                reportMap[targetPlat].incomes[cat] += amount;
+                reportMap[targetPlat].totalIn += amount;
+                grandTotalMasuk += amount;
+            } 
+            // Cabang 2: Pengeluaran
+            else if (type === "keluar" || cf.pengeluaran > 0) {
+                reportMap[targetPlat].expenses[cat] += amount;
+                reportMap[targetPlat].totalOut += amount;
+                grandTotalKeluar += amount;
+            }
+
+            // Cabang 3: HPP / Jumlah Pokok (Bisa nempel di baris masuk)
+            if (pokok > 0) {
+                reportMap[targetPlat].expenses["Jumlah Pokok"] += pokok;
+                reportMap[targetPlat].totalOut += pokok;
+                grandTotalKeluar += pokok;
+            }
+        });
+
+        // 5. UPDATE EXECUTIVE SUMMARY
+        document.getElementById('valKasMasuk').innerText = rp(grandTotalMasuk);
+        document.getElementById('valKasKeluar').innerText = rp(grandTotalKeluar);
+        document.getElementById('valLabaBersih').innerText = rp(grandTotalMasuk - grandTotalKeluar);
+
+        // ==============================================================
+        // 6. RENDER HTML TABLE (MENIRU GAYA EXCEL SUHU)
+        // ==============================================================
+        const thead = document.getElementById('pivotHeader');
+        const tbody = document.getElementById('pivotBody');
+        const tfoot = document.getElementById('pivotFooter');
+        
+        thead.innerHTML = ""; tbody.innerHTML = ""; tfoot.innerHTML = "";
+
+        // --- RENDER HEADER BARIS 1 (Group Title) ---
+        let trHead1 = `<tr>
+            <th colspan="2" class="th-unit">UNIT MOTOR</th>
+            <th colspan="${1 + incHeaders.length}" class="th-masuk">PEMASUKAN</th>
+            <th colspan="${1 + expHeaders.length}" class="th-keluar">PENGELUARAN</th>
+            <th class="th-laba">HASIL</th>
+        </tr>`;
+
+        // --- RENDER HEADER BARIS 2 (Sub Categories) ---
+        let trHead2 = `<tr>
+            <th class="th-unit">No Unit</th>
+            <th class="th-unit">Tipe</th>
+            <th class="th-masuk" style="background-color: #388e3c !important;">Total Masuk</th>`;
+            
+        incHeaders.forEach(h => { trHead2 += `<th class="th-masuk">${h}</th>`; });
+        
+        trHead2 += `<th class="th-keluar" style="background-color: #d32f2f !important;">Total Keluar</th>`;
+        expHeaders.forEach(h => { trHead2 += `<th class="th-keluar">${h}</th>`; });
+        
+        trHead2 += `<th class="th-laba">Laba Bersih</th></tr>`;
+        
+        thead.innerHTML = trHead1 + trHead2;
+
+        // --- RENDER ISI BARIS (BODY) ---
+        let colTotals = { in: {}, exp: {} };
+        incHeaders.forEach(h => colTotals.in[h] = 0);
+        expHeaders.forEach(h => colTotals.exp[h] = 0);
+
+        for (let platKey in reportMap) {
+            const data = reportMap[platKey];
+            
+            // Sembunyikan baris jika tidak ada transaksi sama sekali
+            if (data.totalIn === 0 && data.totalOut === 0) continue;
+
+            const netProfit = data.totalIn - data.totalOut;
+            const rowClass = (platKey === "nonunit") ? "row-nonunit" : "";
+
+            let trBody = `<tr class="${rowClass}">
+                <td>${data.platAsli}</td>
+                <td>${data.tipe}</td>
+                <td class="text-right fw-bold text-success">${rp(data.totalIn)}</td>`;
+
+            incHeaders.forEach(h => {
+                trBody += `<td class="text-right">${rp(data.incomes[h])}</td>`;
+                colTotals.in[h] += data.incomes[h];
+            });
+
+            trBody += `<td class="text-right fw-bold text-danger">${rp(data.totalOut)}</td>`;
+
+            expHeaders.forEach(h => {
+                trBody += `<td class="text-right">${rp(data.expenses[h])}</td>`;
+                colTotals.exp[h] += data.expenses[h];
+            });
+
+            const netColor = netProfit >= 0 ? "text-success" : "text-danger";
+            trBody += `<td class="text-right fw-bold ${netColor}">${rp(netProfit)}</td></tr>`;
+            
+            tbody.innerHTML += trBody;
+        }
+
+        // --- RENDER TOTAL BAWAH (FOOTER) ---
+        let trFoot = `<tr class="row-total">
+            <td colspan="2" class="text-center">TOTAL KESELURUHAN</td>
+            <td class="text-right text-success">${rp(grandTotalMasuk)}</td>`;
+            
+        incHeaders.forEach(h => { trFoot += `<td class="text-right">${rp(colTotals.in[h])}</td>`; });
+        
+        trFoot += `<td class="text-right text-danger">${rp(grandTotalKeluar)}</td>`;
+        
+        expHeaders.forEach(h => { trFoot += `<td class="text-right">${rp(colTotals.exp[h])}</td>`; });
+        
+        const grandNet = grandTotalMasuk - grandTotalKeluar;
+        trFoot += `<td class="text-right ${grandNet >= 0 ? 'text-success' : 'text-danger'}">${rp(grandNet)}</td></tr>`;
+        
+        tfoot.innerHTML = trFoot;
+    }
+
+    // 🌟 EKSPOR EXCEL (OTOMATIS MENGCOPY TABEL PIVOT)
     function exportToExcel() {
         const startVal = startDateInput.value;
         const endVal = endDateInput.value;
-        const filename = `Laporan_Cashflow_${clientToken.toUpperCase()}_${startVal}_to_${endVal}.xls`;
+        const filename = `Laporan_Pivot_${clientToken.toUpperCase()}_${startVal}_to_${endVal}.xls`;
 
         let htmlTable = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Report Detail</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>
+            <head><meta charset="utf-8"></head>
             <body>
-                <h2>AMS PRO - LAPORAN KEUANGAN KLIEN (${clientToken.toUpperCase()})</h2>
+                <h2>AMS PRO - LAPORAN KONSOLIDASI AKUNTANSI (${clientToken.toUpperCase()})</h2>
                 <p>Periode: ${startVal} s/d ${endVal}</p>
                 <br>
-                <h3>I. EXECUTIVE SUMMARY</h3>
-                <table border="1">
-                    <tr>
-                        <th>TOTAL KAS MASUK (GROSS)</th>
-                        <th>TOTAL KAS KELUAR (EXPENSES)</th>
-                        <th>LABA BERSIH (NET PROFIT)</th>
-                    </tr>
-                    <tr>
-                        <td>${document.getElementById('valKasMasuk').innerText}</td>
-                        <td>${document.getElementById('valKasKeluar').innerText}</td>
-                        <td style="font-weight: bold; background-color: #e2f0d9;">${document.getElementById('valLabaBersih').innerText}</td>
-                    </tr>
-                </table>
-                <br>
-                <h3>II. DETAILED CONSOLIDATED REPORT</h3>
-                <table border="1">
-                    <thead>
-                        ${document.getElementById('ledgerHeader').innerHTML}
-                    </thead>
-                    <tbody>
-                        ${document.getElementById('ledgerBody').innerHTML}
-                    </tbody>
-                </table>
+                ${document.getElementById('excelPivotTable').outerHTML}
             </body>
             </html>
         `;
