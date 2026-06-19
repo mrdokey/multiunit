@@ -19,7 +19,6 @@
         .bg-income { background: linear-gradient(135deg, #2ecc71, #27ae60); }
         .bg-expense { background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .bg-profit { background: linear-gradient(135deg, #2980b9, #2c3e50); }
-        .bg-addon { background: linear-gradient(135deg, #fd7e14, #d35400); }
         .table-custom th { background-color: #2d3436; color: white; border: none; font-size: 0.8rem; text-transform: uppercase; }
         .table-custom td { vertical-align: middle; font-size: 0.9rem; }
     </style>
@@ -35,7 +34,6 @@
                 <p class="m-0 opacity-75" style="font-size: 0.85rem;" id="lblSubTitle">Real-time Financial Board</p>
             </div>
             
-            <!-- Kontrol Pemilihan Bulan -->
             <div class="d-flex align-items-center gap-2">
                 <button onclick="changeMonth(-1)" class="btn btn-outline-light btn-sm"><i class="fas fa-chevron-left"></i></button>
                 <input type="month" id="monthPicker" class="form-control form-control-sm bg-light fw-bold" style="width: 150px; cursor: pointer;">
@@ -47,13 +45,13 @@
         <!-- Status Loading -->
         <div id="loading" class="text-center py-5">
             <div class="spinner-border text-warning" role="status"></div>
-            <p class="mt-2 text-muted fw-bold">Calculating finances harian...</p>
+            <p class="mt-2 text-muted fw-bold">Calculating finances...</p>
         </div>
 
         <!-- ISI DASHBOARD UTAMA -->
         <div id="dashboardContent" style="display: none;" class="p-4">
             
-            <!-- 1. KARTU EXECUTIVE SUMMARY (UNIVERSAL) -->
+            <!-- 1. KARTU EXECUTIVE SUMMARY (RIIL KAS MASUK & KELUAR) -->
             <div class="section-title"><i class="fas fa-chart-line text-warning"></i> Executive Summary</div>
             <div class="row g-4 mb-5">
                 <div class="col-md-4">
@@ -79,69 +77,79 @@
                 </div>
             </div>
 
-            <!-- 2. BREAKDOWN PENDAPATAN ADD-ONS (DINAMIS SENSITIF SKEMA KLIEN) -->
-            <div class="section-title"><i class="fas fa-tags text-warning"></i> Add-on & Services Revenue</div>
-            <div class="row g-3 mb-5" id="addonRevenueContainer">
-                <!-- Kartu Pendapatan tambahan asuransi dll akan di-render dinamis oleh JS di sini -->
-            </div>
-
-            <!-- 3. DETAIL EXPENSE CATEGORIES & LEDGER -->
-            <div class="row g-4">
-                <!-- Pengelompokan Pengeluaran -->
+            <!-- 2. BREAKDOWN CATEGORIES (PENDAPATAN VS PENGELUARAN) -->
+            <div class="row g-4 mb-5">
+                <!-- Sumber Pendapatan Kas Masuk -->
                 <div class="col-lg-6">
-                    <div class="section-title"><i class="fas fa-pie-chart text-warning"></i> Expense Categories</div>
+                    <div class="section-title"><i class="fas fa-arrow-circle-down text-success"></i> Income Sources</div>
                     <div class="table-responsive bg-light p-3 rounded-3 border">
                         <table class="table table-hover table-custom m-0">
                             <thead>
                                 <tr>
-                                    <th>Category</th>
+                                    <th>Income Category</th>
+                                    <th class="text-end">Total Amount</th>
+                                    <th class="text-end">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="incomeCategoryBody">
+                                <!-- Grouping kategori pendapatan dinamis -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Kategori Pengeluaran Kas Keluar -->
+                <div class="col-lg-6">
+                    <div class="section-title"><i class="fas fa-arrow-circle-up text-danger"></i> Expense Categories</div>
+                    <div class="table-responsive bg-light p-3 rounded-3 border">
+                        <table class="table table-hover table-custom m-0">
+                            <thead>
+                                <tr>
+                                    <th>Expense Category</th>
                                     <th class="text-end">Total Amount</th>
                                     <th class="text-end">Percentage</th>
                                 </tr>
                             </thead>
                             <tbody id="expenseCategoryBody">
-                                <!-- Grouping kategori pengeluaran harian -->
+                                <!-- Grouping kategori pengeluaran dinamis -->
                             </tbody>
                         </table>
                     </div>
                 </div>
+            </div>
 
-                <!-- Buku Kas Terkini -->
-                <div class="col-lg-6">
-                    <div class="section-title"><i class="fas fa-history text-warning"></i> Recent CashFlow Ledger</div>
-                    <div class="table-responsive bg-light p-3 rounded-3 border" style="max-height: 350px; overflow-y: auto;">
-                        <table class="table table-hover table-custom m-0">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Category/Notes</th>
-                                    <th class="text-end">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ledgerBody">
-                                <!-- Baris buku kas -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <!-- 3. BUKU KAS LEDGER DIGITAL -->
+            <div class="section-title"><i class="fas fa-history text-warning"></i> Recent CashFlow Ledger</div>
+            <div class="table-responsive bg-light p-3 rounded-3 border" style="max-height: 450px; overflow-y: auto;">
+                <table class="table table-hover table-custom m-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Type / Date</th>
+                            <th style="width: 25%;">Category</th>
+                            <th style="width: 40%;">Notes (Description)</th>
+                            <th style="width: 20%;" class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerBody">
+                        <!-- Baris buku kas riil -->
+                    </tbody>
+                </table>
             </div>
 
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const params = new URLSearchParams(window.location.search);
     const clientToken = params.get('token') || 'mrd';
     
-    // API URL mengarah ke doGet Master Registry
+    // 🌟 SINKRONISASI: Menggunakan URL GAS Master terbaru milik Suhu (q4YBHk/exec)
     const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${clientToken}`;
 
-    let cashflows = []; // Data mentah dari CashFlow Klien
-    let bookings = [];  // Data mentah dari Register Klien
-    let clientColumns = [];
+    let cashflows = []; 
 
-    // Setup Default Bulan Ini
     const monthPicker = document.getElementById('monthPicker');
     const today = new Date();
     
@@ -183,14 +191,8 @@
                 return;
             }
 
-            // Integrasi CashFlow secara dinamis
-            bookings = data.bookings || [];
-            
-            // Note: Karena doGet Master mengembalikan 'bookings' dan 'items' untuk PWA Scheduler, 
-            // di PWA Keuangan ini kita juga mengambil data cashflows mentah.
-            // Jika data cashflow belum siap di GAS, kita gunakan data kalkulasi dari register sebagai basis.
+            // Ambil data cashflows riil hasil sinkronisasi dari Google Sheet klien!
             cashflows = data.cashflows || []; 
-            clientColumns = data.columns || [];
 
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboardContent').style.display = 'block';
@@ -203,13 +205,6 @@
         }
     }
 
-    // Detektor Kolom dinamis di PWA
-    function hasColumn(columnName) {
-        if (clientColumns.length === 0) return true; // Default fallback jika belum dideploy penuh
-        const cleanTarget = columnName.toLowerCase().replace(/\s/g, "").replace(/_/g, "");
-        return clientColumns.some(col => col.toLowerCase().replace(/\s/g, "").replace(/_/g, "") === cleanTarget);
-    }
-
     function kalkulasiKeuangan() {
         const [selectedYear, selectedMonth] = monthPicker.value.split('-');
         const targetYear = parseInt(selectedYear);
@@ -218,132 +213,91 @@
         let totalKasMasuk = 0;
         let totalKasKeluar = 0;
 
-        // Penampung data add-ons dinamis
-        let totalBaseRental = 0;
-        let totalDiscount = 0;
-        let totalInsurance = 0;
-        let totalSurface = 0;
-        let totalHolder = 0;
-        let totalDelivery = 0;
-        let totalAdditional = 0;
-
+        let incomeCategories = {};
         let expenseCategories = {};
+        
         const ledgerBody = document.getElementById('ledgerBody');
         ledgerBody.innerHTML = "";
 
-        // --------------------------------------------------------
-        // 1. FILTER & HITUNG TRANSAKSI REGISTER (PENDAPATAN DETAIL)
-        // --------------------------------------------------------
-        bookings.forEach(b => {
-            const bStatus = b.status ? b.status.toLowerCase() : "";
-            if (bStatus.includes("cancel")) return; // Lewati pesanan batal
+        // Urutkan transaksi berdasarkan tanggal teratas (Terbaru)
+        const filteredCashFlows = cashflows.filter(cf => {
+            if (!cf.tanggal) return false;
+            const cfDate = parseKeTanggal(cf.tanggal);
+            return cfDate.getFullYear() === targetYear && cfDate.getMonth() === targetMonthIndex;
+        }).sort((a, b) => parseKeTanggal(b.tanggal) - parseKeTanggal(a.tanggal));
 
-            const bStart = new Date(b.start);
-            // Saring berdasarkan Bulan dan Tahun Pilihan
-            if (bStart.getFullYear() !== targetYear || bStart.getMonth() !== targetMonthIndex) return;
+        if (filteredCashFlows.length > 0) {
+            filteredCashFlows.forEach(cf => {
+                const cfDate = parseKeTanggal(cf.tanggal);
+                const type = cf.jenis ? cf.jenis.toLowerCase().trim() : "";
+                const amount = parseInt(cf.jumlah) || 0;
+                const category = cf.kategori || "Umum";
+                const dateStr = `${cfDate.getDate()}-${cfDate.getMonth() + 1}-${cfDate.getFullYear()}`;
 
-            // Tambahkan Base Total, DP, dan sisa tagihan ke Kas Masuk
-            const basePrice = parseInt(b.harga) || 0;
-            const duration = parseInt(b.jml_hari) || 1;
-            const discountVal = parseInt(b.diskon) || 0;
-            
-            totalBaseRental += (basePrice * duration);
-            totalDiscount += discountVal;
+                if (type === "masuk") {
+                    totalKasMasuk += amount;
+                    // Akumulasi pendapatan per kategori dinamis dari Google Sheets harian
+                    if (!incomeCategories[category]) incomeCategories[category] = 0;
+                    incomeCategories[category] += amount;
 
-            // Akumulasi kas masuk dari DP + Jml Bayar Pelunasan
-            const dpPaid = parseInt(b.byr_dp) || 0;
-            const fullPaid = parseInt(b.jml_byr) || 0;
-            totalKasMasuk += (dpPaid + fullPaid);
+                    // Tambahkan ke Buku Kas (Ledger)
+                    ledgerBody.innerHTML += `
+                        <tr>
+                            <td><span class="badge bg-success">MASUK</span><br><small class="text-muted">${dateStr}</small></td>
+                            <td><strong>${category}</strong></td>
+                            <td>${cf.keterangan || "-"} ${cf.motor ? `(${cf.motor.toUpperCase()})` : ""}</td>
+                            <td class="text-end text-success fw-bold">+Rp ${amount.toLocaleString('id-ID')}</td>
+                        </tr>`;
+                } else if (type === "keluar") {
+                    totalKasKeluar += amount;
+                    // Akumulasi pengeluaran per kategori dinamis dari Google Sheets harian
+                    if (!expenseCategories[category]) expenseCategories[category] = 0;
+                    expenseCategories[category] += amount;
 
-            // Akumulasi pendapatan Add-on jika kolomnya aktif di database klien
-            if (hasColumn("insurance")) totalInsurance += (parseInt(b.insurance) || 0);
-            if (hasColumn("surface")) totalSurface += (parseInt(b.surface) || 0);
-            if (hasColumn("phone holder")) totalHolder += (parseInt(b.phone_holder) || 0);
-            if (hasColumn("delivery")) totalDelivery += (parseInt(b.delivery) || 0);
-            if (hasColumn("additional")) totalAdditional += (parseInt(b.additional) || 0);
-
-            // Masukkan data sewa sebagai baris Kas Masuk di Ledger
-            const dateStr = `${bStart.getDate()}-${bStart.getMonth() + 1}-${bStart.getFullYear()}`;
-            ledgerBody.innerHTML += `
-                <tr>
-                    <td><span class="badge bg-success">MASUK</span><br><small class="text-muted">${dateStr}</small></td>
-                    <td><strong>${b.nama}</strong><br><small class="text-muted">Sewa Motor (${b.no_motor.toUpperCase()})</small></td>
-                    <td class="text-end text-success fw-bold">+Rp ${(dpPaid + fullPaid).toLocaleString('id-ID')}</td>
-                </tr>`;
-        });
-
-        // --------------------------------------------------------
-        // 2. FILTER & HITUNG KAS KELUAR DARI CASHFLOW SHEET
-        // --------------------------------------------------------
-        cashflows.forEach(cf => {
-            const cfDate = new Date(cf.tanggal);
-            if (cfDate.getFullYear() !== targetYear || cfDate.getMonth() !== targetMonthIndex) return;
-
-            const type = cf.jenis ? cf.jenis.toLowerCase() : "";
-            const amount = parseInt(cf.jumlah) || 0;
-            const category = cf.kategori || "Umum";
-            const dateStr = `${cfDate.getDate()}-${cfDate.getMonth() + 1}-${cfDate.getFullYear()}`;
-
-            if (type === "keluar") {
-                totalKasKeluar += amount;
-
-                // Grouping pengeluaran berdasarkan kategori harian
-                if (!expenseCategories[category]) expenseCategories[category] = 0;
-                expenseCategories[category] += amount;
-
-                // Masukkan data pengeluaran sebagai baris Kas Keluar di Ledger
-                ledgerBody.innerHTML += `
-                    <tr>
-                        <td><span class="badge bg-danger">KELUAR</span><br><small class="text-muted">${dateStr}</small></td>
-                        <td><strong>${category}</strong><br><small class="text-muted">${cf.keterangan || "-"}</small></td>
-                        <td class="text-end text-danger fw-bold">-Rp ${amount.toLocaleString('id-ID')}</td>
-                    </tr>`;
-            }
-        });
+                    // Tambahkan ke Buku Kas (Ledger)
+                    ledgerBody.innerHTML += `
+                        <tr>
+                            <td><span class="badge bg-danger">KELUAR</span><br><small class="text-muted">${dateStr}</small></td>
+                            <td><strong>${category}</strong></td>
+                            <td>${cf.keterangan || "-"} ${cf.motor ? `(${cf.motor.toUpperCase()})` : ""}</td>
+                            <td class="text-end text-danger fw-bold">-Rp ${amount.toLocaleString('id-ID')}</td>
+                        </tr>`;
+                }
+            });
+        } else {
+            ledgerBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No cashflow transactions recorded for this month.</td></tr>`;
+        }
 
         // Tampilkan Summary Executive
         document.getElementById('valKasMasuk').innerText = `Rp ${totalKasMasuk.toLocaleString('id-ID')}`;
         document.getElementById('valKasKeluar').innerText = `Rp ${totalKasKeluar.toLocaleString('id-ID')}`;
         document.getElementById('valLabaBersih').innerText = `Rp ${(totalKasMasuk - totalKasKeluar).toLocaleString('id-ID')}`;
 
-        // --------------------------------------------------------
-        // 3. RENDER KARTU PENDAPATAN ADD-ONS SECARA DINAMIS
-        // --------------------------------------------------------
-        const addonContainer = document.getElementById('addonRevenueContainer');
-        addonContainer.innerHTML = "";
-
-        // Tambahkan kartu Base Rental & Diskon (Statis)
-        addonContainer.innerHTML += buatKartuAddonHTML("Base Rental Income", totalBaseRental, "fas fa-motorcycle");
-        addonContainer.innerHTML += buatKartuAddonHTML("Discounts Given", totalDiscount, "fas fa-percentage", true);
-
-        // Tambahkan kartu Add-ons hanya jika kolom tersebut ada di database klien harian
-        if (hasColumn("insurance")) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Insurance Revenue", totalInsurance, "fas fa-shield-alt");
-        }
-        if (hasColumn("surface")) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Surface Cleaning Revenue", totalSurface, "fas fa-soap");
-        }
-        if (hasColumn("phone holder")) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Phone Holder Revenue", totalHolder, "fas fa-mobile-alt");
-        }
-        if (hasColumn("delivery")) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Delivery Fee Revenue", totalDelivery, "fas fa-truck");
-        }
-        if (hasColumn("additional")) {
-            addonContainer.innerHTML += buatKartuAddonHTML("Additional Service Revenue", totalAdditional, "fas fa-plus-circle");
+        // RENDER TABEL PENDAPATAN KAS MASUK
+        const incomeCategoryBody = document.getElementById('incomeCategoryBody');
+        incomeCategoryBody.innerHTML = "";
+        if (totalKasMasuk > 0) {
+            for (let cat in incomeCategories) {
+                const amount = incomeCategories[cat];
+                const percentage = ((amount / totalKasMasuk) * 100).toFixed(1);
+                incomeCategoryBody.innerHTML += `
+                    <tr>
+                        <td><strong>${cat}</strong></td>
+                        <td class="text-end fw-bold text-success">Rp ${amount.toLocaleString('id-ID')}</td>
+                        <td class="text-end"><span class="badge bg-secondary">${percentage}%</span></td>
+                    </tr>`;
+            }
+        } else {
+            incomeCategoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">No income recorded for this month.</td></tr>`;
         }
 
-        // --------------------------------------------------------
-        // 4. RENDER TABEL PERSENTASE KATEGORI PENGELUARAN
-        // --------------------------------------------------------
+        // RENDER TABEL PENGELUARAN KAS KELUAR
         const expenseCategoryBody = document.getElementById('expenseCategoryBody');
         expenseCategoryBody.innerHTML = "";
-
         if (totalKasKeluar > 0) {
             for (let cat in expenseCategories) {
                 const amount = expenseCategories[cat];
                 const percentage = ((amount / totalKasKeluar) * 100).toFixed(1);
-                
                 expenseCategoryBody.innerHTML += `
                     <tr>
                         <td><strong>${cat}</strong></td>
@@ -356,19 +310,17 @@
         }
     }
 
-    // Fungsi pembantu pembuat Kartu Add-on HTML kustom
-    function buatKartuAddonHTML(title, value, iconClass, isRed = false) {
-        const textClass = isRed ? "text-danger" : "text-success";
-        return `
-            <div class="col-md-3 col-sm-6">
-                <div class="card p-3 border shadow-sm h-100 d-flex flex-row justify-content-between align-items-center">
-                    <div>
-                        <small class="text-muted fw-bold d-block" style="font-size: 0.7rem;">${title.toUpperCase()}</small>
-                        <span class="fw-bold fs-5 ${textClass}">Rp ${value.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div class="fs-3 text-muted opacity-50"><i class="${iconClass}"></i></div>
-                </div>
-            </div>`;
+    // Converter Tanggal Robust
+    function parseKeTanggal(val) {
+        if (val instanceof Date) return val;
+        if (typeof val === "string") {
+            const parts = val.trim().split(/\s+/)[0].split(/[-/]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) return new Date(parts[0], parts[1] - 1, parts[2]);
+                else return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+        }
+        return new Date(val);
     }
 </script>
 </body>
