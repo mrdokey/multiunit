@@ -51,9 +51,8 @@
             <div class="row g-4 mb-5">
                 <div class="col-md-6">
                     <label class="form-label">Full Name</label>
-                    <!-- Ditambahkan list="customerList" untuk fitur Autocomplete Dropdown -->
                     <input type="text" name="nama" id="inputNama" list="customerList" placeholder="e.g. John Doe" required class="form-control" autocomplete="off">
-                    <datalist id="customerList"></datalist> <!-- Tempat menyimpan list pilihan nama -->
+                    <datalist id="customerList"></datalist> 
                     <small id="namaStatus" class="form-text text-muted d-block mt-2" style="font-size: 0.75rem; font-weight: 600;"></small>
                 </div>
                 <div class="col-md-6">
@@ -87,11 +86,10 @@
                 </div>
             </div>
 
-            <!-- 3. ADD-ONS / LAYANAN TAMBAHAN (DENGAN REKAYASA FORMAT CHECKLIST VS NOMINAL) -->
+            <!-- 3. ADD-ONS / LAYANAN TAMBAHAN -->
             <div id="addonSection">
                 <div class="section-title"><i class="fas fa-plus-circle"></i> Add-ons & Services</div>
                 <div class="row g-4 mb-5">
-                    <!-- Format Checklist 1: Insurance (Karbit Only) -->
                     <div class="col-md-4" id="containerInsuranceCheckbox" style="display: none;">
                         <div class="addon-box d-flex align-items-center">
                             <input class="form-check-input me-3" type="checkbox" id="chkInsurance" name="opt_insurance" style="transform: scale(1.3);">
@@ -102,7 +100,6 @@
                         </div>
                     </div>
 
-                    <!-- Format Checklist 2: Phone Holder (Karbit, etc.) -->
                     <div class="col-md-4" id="containerPhoneHolder" style="display: none;">
                         <div class="addon-box d-flex align-items-center">
                             <input class="form-check-input me-3" type="checkbox" id="chkHolder" name="opt_holder" style="transform: scale(1.3);">
@@ -113,7 +110,6 @@
                         </div>
                     </div>
 
-                    <!-- Format Checklist 3: Surface (Karbit, etc.) -->
                     <div class="col-md-4" id="containerSurface" style="display: none;">
                         <div class="addon-box d-flex align-items-center">
                             <input class="form-check-input me-3" type="checkbox" id="chkSurface" name="opt_surface" style="transform: scale(1.3);">
@@ -124,7 +120,6 @@
                         </div>
                     </div>
 
-                    <!-- Format Nominal Manual: Insurance (Klien 493, etc.) -->
                     <div class="col-md-4" id="containerInsuranceNumber" style="display: none;">
                         <label class="form-label">Motor Insurance Fee (Nominal)</label>
                         <div class="d-flex align-items-center gap-2">
@@ -135,9 +130,8 @@
                 </div>
             </div>
 
-            <!-- 3.5 BIAYA TAMBAHAN (DILINDUNGI DETEKTOR KOLOM) -->
+            <!-- 3.5 BIAYA TAMBAHAN -->
             <div id="feesSection" class="row g-4 mb-5">
-                <!-- Delivery Fee -->
                 <div class="col-md-6" id="containerDelivery" style="display: none;">
                     <label class="form-label">Delivery Fee (Biaya Antar-Jemput)</label>
                     <div class="d-flex align-items-center gap-2">
@@ -145,7 +139,6 @@
                         <input type="number" name="delivery" id="inputDelivery" class="form-control" value="0" min="0">
                     </div>
                 </div>
-                <!-- Additional Fee -->
                 <div class="col-md-6" id="containerAdditional" style="display: none;">
                     <label class="form-label">Additional Service Fee (Biaya Tambahan)</label>
                     <div class="d-flex align-items-center gap-2">
@@ -158,18 +151,28 @@
             <!-- 4. Payment Information -->
             <div class="section-title"><i class="fas fa-credit-card"></i> Payment Information</div>
             <div class="row g-4 mb-5">
-                <div class="col-md-4">
+                <div class="col-md-4" id="colTipeBayar">
                     <label class="form-label">Payment Status</label>
                     <select name="tipe_bayar" class="form-select">
                         <option value="DP">Down Payment (DP)</option>
                         <option value="FULL">Full Payment (Lunas)</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" id="colNominal">
                     <label class="form-label">Amount Paid (IDR)</label>
                     <input type="number" name="nominal" id="inputNominal" placeholder="e.g. 50000" required class="form-control">
                 </div>
-                <div class="col-md-4">
+                
+                <!-- 🌟 INTEGRASI BARU: INPUT DEPOSIT FISIK (DILINDUNGI SENSOR VISIBILITAS) -->
+                <div class="col-md-4" id="containerDeposit" style="display: none;">
+                    <label class="form-label">Security Deposit (IDR)</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted fw-bold">Rp</span>
+                        <input type="number" name="deposit" id="inputDeposit" class="form-control" value="0" min="0">
+                    </div>
+                </div>
+
+                <div class="col-md-4" id="colMetodePembayaran">
                     <label class="form-label">Payment Method</label>
                     <select name="metode_pembayaran" class="form-select" required>
                         <option value="Cash">Cash</option>
@@ -221,6 +224,11 @@
                     <span><i class="fas fa-mobile-alt me-1"></i> Phone Holder:</span>
                     <span class="fw-bold" id="lblHolder">+IDR 0</span>
                 </div>
+                <!-- 🌟 INTEGRASI BARU: RINCIAN BIAYA DEPOSIT DI STRUK PREVIEW -->
+                <div class="justify-content-between mb-2 text-danger" id="rowDeposit" style="display: none !important;">
+                    <span><i class="fas fa-wallet me-1"></i> Security Deposit:</span>
+                    <span class="fw-bold" id="lblDeposit">+IDR 0</span>
+                </div>
                 <div class="justify-content-between mb-2 text-danger" id="rowDelivery" style="display: none !important;">
                     <span><i class="fas fa-truck me-1"></i> Delivery Fee:</span>
                     <span class="fw-bold" id="lblDelivery">+IDR 0</span>
@@ -260,9 +268,9 @@
     let userHasEditedTotal = false;
     let searchTimeout = null;
     
-    // PEMETAAN JALUR LOKAL
+    // PEMETAAN JALUR LOKAL (Ditambahkan deposit di list kolom)
     const skemaLokalklien = {
-        "karbit": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "surface", "phone holder", "delivery", "additional"],
+        "karbit": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "surface", "phone holder", "delivery", "additional", "deposit"],
         "493": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "delivery"],
         "mrd": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar"]
     };
@@ -367,6 +375,19 @@
 
         document.getElementById('containerDelivery').style.setProperty('display', hasColumn('delivery') ? 'block' : 'none', 'important');
         document.getElementById('containerAdditional').style.setProperty('display', hasColumn('additional') ? 'block' : 'none', 'important');
+
+        // 🌟 SENSOR VISIBILITAS DEPOSIT: Atur ukuran grid dinamis (col-md-3 jika ada, col-md-4 jika tidak ada)
+        if (hasColumn("deposit")) {
+            document.getElementById("containerDeposit").style.setProperty('display', 'block', 'important');
+            document.getElementById("colTipeBayar").className = "col-md-3";
+            document.getElementById("colNominal").className = "col-md-3";
+            document.getElementById("colMetodePembayaran").className = "col-md-3";
+        } else {
+            document.getElementById("containerDeposit").style.setProperty('display', 'none', 'important');
+            document.getElementById("colTipeBayar").className = "col-md-4";
+            document.getElementById("colNominal").className = "col-md-4";
+            document.getElementById("colMetodePembayaran").className = "col-md-4";
+        }
     }
 
     function hitungTotal() {
@@ -404,11 +425,14 @@
         
         const deliveryFee = (document.getElementById('inputDelivery') && hasColumn('delivery')) ? parseInt(document.getElementById('inputDelivery').value) || 0 : 0;
         const additionalFee = (document.getElementById('inputAdditional') && hasColumn('additional')) ? parseInt(document.getElementById('inputAdditional').value) || 0 : 0;
+        
+        // 🌟 HITUNG DEPOSIT
+        const depositVal = (document.getElementById('inputDeposit') && hasColumn('deposit')) ? parseInt(document.getElementById('inputDeposit').value) || 0 : 0;
 
         const valSurface = surfChecked ? (50000 * totalUnits) : 0;
         const valHolder = holdChecked ? (15000 * totalUnits) : 0;
 
-        calculatedGrandTotal = baseRental + valInsurance + valSurface + valHolder + deliveryFee + additionalFee;
+        calculatedGrandTotal = baseRental + valInsurance + valSurface + valHolder + deliveryFee + additionalFee + depositVal;
 
         document.getElementById('lblDurasi').innerText = `${jmlHari} Day(s) (${totalUnits} Unit)`;
         document.getElementById('lblBase').innerText = `IDR ${baseRental.toLocaleString('id-ID')}`;
@@ -422,6 +446,10 @@
         document.getElementById('rowHolder').style.setProperty('display', holdChecked ? 'flex' : 'none', 'important');
         document.getElementById('lblHolder').innerText = `+IDR ${valHolder.toLocaleString('id-ID')}`;
 
+        // TAMPILKAN DEPOSIT DI PREVIEW NOTA
+        document.getElementById('rowDeposit').style.setProperty('display', depositVal > 0 ? 'flex' : 'none', 'important');
+        document.getElementById('lblDeposit').innerText = `+IDR ${depositVal.toLocaleString('id-ID')}`;
+
         document.getElementById('rowDelivery').style.setProperty('display', deliveryFee > 0 ? 'flex' : 'none', 'important');
         document.getElementById('lblDelivery').innerText = `+IDR ${deliveryFee.toLocaleString('id-ID')}`;
 
@@ -434,7 +462,7 @@
     }
 
     /**
-     * 👥 LOGIKA PENCARIAN & AUTOCOMPLETE NATIVE HTML5 BERDASARKAN NAMA LENGKAP
+     * 👥 LOGIKA PENCARIAN & AUTOCOMPLETE
      */
     function debouncedSearchCustomer() {
         clearTimeout(searchTimeout);
@@ -443,7 +471,7 @@
         const dataList = document.getElementById('customerList');
         const namaVal = namaInput.value.trim();
 
-        if (namaVal.length < 2) { // Picu saat mengetik minimal 2 huruf
+        if (namaVal.length < 2) {
             namaStatus.innerHTML = "";
             dataList.innerHTML = "";
             return;
@@ -457,7 +485,7 @@
                 const response = await fetch(searchUrl);
                 const data = await response.json();
                 
-                dataList.innerHTML = ""; // Bersihkan pilihan lama
+                dataList.innerHTML = ""; 
                 window.currentSuggestions = data.results || [];
 
                 if (window.currentSuggestions.length > 0) {
@@ -465,7 +493,7 @@
                     
                     window.currentSuggestions.forEach(cust => {
                         const option = document.createElement('option');
-                        option.value = cust.nama; // Nilai nama yang akan tampil di pilihan
+                        option.value = cust.nama; 
                         dataList.appendChild(option);
                     });
                 } else {
@@ -475,7 +503,7 @@
                 console.error("Gagal melakukan pencarian customer:", err);
                 namaStatus.innerHTML = "";
             }
-        }, 600); // Penundaan pencarian 600ms
+        }, 600); 
     }
 
     function safeAddListener(id, event, callback) {
@@ -492,11 +520,10 @@
     safeAddListener('chkHolder', 'change', hitungTotal);
     safeAddListener('inputDelivery', 'input', hitungTotal);
     safeAddListener('inputAdditional', 'input', hitungTotal);
+    safeAddListener('inputDeposit', 'input', hitungTotal); // Event listener deposit
     
-    // Pasang listener pada input Nama untuk autocomplete dinamis
     safeAddListener('inputNama', 'input', debouncedSearchCustomer);
 
-    // Otomatis isi kolom lain (Autofill) saat tamu memilih nama dari dropdown datalist
     safeAddListener('inputNama', 'change', () => {
         const namaInputVal = document.getElementById('inputNama').value.trim();
         if (window.currentSuggestions && window.currentSuggestions.length > 0) {
@@ -551,13 +578,18 @@
         
         const deliveryFeeVal = (document.getElementById('inputDelivery') && hasColumn('delivery')) ? parseInt(document.getElementById('inputDelivery').value) || 0 : 0;
         const additionalFeeVal = (document.getElementById('inputAdditional') && hasColumn('additional')) ? parseInt(document.getElementById('inputAdditional').value) || 0 : 0;
+        
+        // AMBIL NILAI DEPOSIT DARI FORM
+        const depositVal = (document.getElementById('inputDeposit') && hasColumn('deposit')) ? parseInt(document.getElementById('inputDeposit').value) || 0 : 0;
+
+        const valSurface = surfChecked ? (50000 * totalUnits) : 0;
+        const valHolder = holdChecked ? (15000 * totalUnits) : 0;
 
         let successCounter = 0;
         let runningTotalNewPrice = 0;
         let runningTotalDp = 0;
         let runningTotalBayar = 0;
 
-        // Alokasi Sisa Bulat Helm (Integer Remainder)
         const totalHelmets = parseInt(document.getElementById('inputJmlHelm').value) || 0;
         const totalUnits = selectedUnits.length;
 
@@ -565,7 +597,6 @@
             const currentUnit = selectedUnits[i];
             btn.innerText = `PROCESSING UNIT ${i + 1} OF ${selectedUnits.length}...`;
 
-            // 🪖 ALGORITMA DISTRIBUSI SISA BULAT HELM (INTEGER REMAINDER)
             const baseHelmets = Math.floor(totalHelmets / totalUnits);
             const remainderHelmets = totalHelmets % totalUnits;
             const unitHelmets = baseHelmets + (i < remainderHelmets ? 1 : 0);
@@ -614,6 +645,12 @@
             const unitNewBasePrice = Math.round((unitNewPrice - unitInsuranceVal - unitSurfaceVal - unitHolderVal) / jmlHari);
             const groupMarker = ` [Group Booking ${i + 1}/${selectedUnits.length}]`;
 
+            // 🌟 PROPORSI DEPOSIT PER MOTOR
+            let unitDepositVal = 0;
+            if (hasColumn("deposit")) {
+                unitDepositVal = depositVal > 0 ? Math.round(depositVal * (unitNewPrice / finalGrandTotal)) : 0;
+            }
+
             const formatPesanGAS = `Booking
 No Motor: ${currentUnit.motor}
 Nama: ${formData.get('nama')}
@@ -630,6 +667,7 @@ Status: Booked
 Insurance: ${unitInsuranceVal}
 Surface: ${unitSurfaceVal}
 Phone Holder: ${unitHolderVal}
+Deposit: ${unitDepositVal}
 Delivery: ${deliveryFeeVal > 0 ? Math.round(deliveryFeeVal * (unitNewPrice / finalGrandTotal)) : 0}
 Additional: ${additionalFeeVal > 0 ? Math.round(additionalFeeVal * (unitNewPrice / finalGrandTotal)) : 0}
 Payment: ${formData.get('metode_pembayaran')}
