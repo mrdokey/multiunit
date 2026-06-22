@@ -268,8 +268,9 @@
     let userHasEditedTotal = false;
     let searchTimeout = null;
     
-    // PEMETAAN JALUR LOKAL (Ditambahkan deposit di list kolom)
+    // UPDATE SINKRONISASI SKEMA TERPUSAT & DINAMIS DI FORM.HTML
     const skemaLokalklien = {
+        "admin": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "surface", "phone holder", "delivery", "additional", "deposit"], // 🌟 Tambahkan skema lengkap di admin
         "karbit": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "surface", "phone holder", "delivery", "additional", "deposit"],
         "493": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar", "insurance", "delivery"],
         "mrd": ["no motor", "tgl register", "nama", "no wa", "jml helm", "tgl sewa", "jml hari", "tgl kembali", "harga", "diskon", "total", "byr DP", "jml byr", "sisa tagihan", "status", "Tipe Motor", "Alamat Jemput", "Alamat Antar"]
@@ -279,13 +280,14 @@
 
     window.onload = async () => {
         const params = new URLSearchParams(window.location.search);
-        activationToken = params.get('token') || 'mrd';
+        activationToken = params.get('token') || 'admin'; // 🌟 Ganti default ke admin agar dinamis
 
         const tokenBersih = activationToken.toLowerCase().trim();
-        clientColumns = skemaLokalklien[tokenBersih] || skemaLokalklien["mrd"];
+        clientColumns = skemaLokalklien[tokenBersih] || skemaLokalklien["admin"]; // 🌟 Fallback ke admin jika token tidak dikenal
 
         try {
-            const schemaUrl = `${WEBHOOK_URL}?token=${activationToken}`;
+            // 🌟 JALUR BYPASS SAKLAR: Pemicu action=getSchema agar tidak diblokir Gatekeeper t harian
+            const schemaUrl = `${WEBHOOK_URL}?token=${activationToken}&action=getSchema`;
             const response = await fetch(schemaUrl);
             const data = await response.json();
             if (data.columns && data.columns.length > 0) {
