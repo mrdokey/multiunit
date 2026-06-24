@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Live Tracking - AMS Pro</title>
+    <!-- Leaflet CSS & JS (Gratis & Sangat Ringan!) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Bootstrap & FontAwesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Roboto, sans-serif; }
+        #map { width: 100%; height: 100%; position: absolute; top: 0; bottom: 0; z-index: 1; }
+        .info-panel {
+            position: absolute; top: 20px; left: 20px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-radius: 16px; padding: 20px; width: calc(100% - 40px); max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.3);
+        }
+        .brand-badge { background: #2d3436; color: white; padding: 5px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <!-- Panel Info Kendaraan di Atas Peta -->
+    <div class="info-panel" id="infoPanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="brand-badge" id="lblBrand">MRD RENTAL</span>
+            <span class="badge bg-success" id="lblStatus">ACTIVE</span>
+        </div>
+        <h4 class="fw-bold text-dark mb-1" id="lblUnit">Loading unit...</h4>
+        <p class="text-muted small mb-3" id="lblPlat">License Plate: -</p>
+        <div class="bg-light p-3 rounded-3 text-start small">
+            <div class="mb-2"><i class="fas fa-map-marker-alt text-danger me-2"></i><b>Coordinates:</b> <span id="lblCoords">Searching...</span></div>
+            <div><i class="fas fa-history text-primary me-2"></i><b>Last Update:</b> <span id="lblTime">Just now</span></div>
+        </div>
+    </div>
+
+    <!-- Wadah Peta Leaflet -->
+    <div id="map"></div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token') || 'mrd';
+        const targetMotor = (params.get('motor') || '').trim().toUpperCase();
+        const tParam = params.get('t') || '';
+
+        // Master GAS URL Terpusat Milik Suhu [1.1]
+        const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${token}&t=${tParam}`;
+
+        // Inisialisasi Peta Leaflet (Default center ke Bali) [1.1]
+        const map = L.map('map').setView([-8.4095, 115.1889], 11);
+
+        // Gunakan Tile Layer OpenStreetMap Gratis (Bebas Biaya API Google!) [1.1]
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Atur Icon Pin Motor Kustom yang Keren [1.1]
+        const motorIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png', // Ikon motor bulat khas MRD
+            iconSize: [45, 45],
+            iconAnchor: [22, 22],
+            popupAnchor: [0, -20]
+        });
+
+        document.getElementById('lblBrand').innerText = `${token.toUpperCase()} RENTAL`;
+
+        async function trackGps() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                if (data.error && data.expired) {
+                    alert("⚠️ Akses Ditolak: Tautan kedaluwarsa.");
+                    document.getElementById('infoPanel').innerHTML = `<h5 class="text-danger">🔒 Link Expired</h5>`;
+                    return;
+                }
+
+                const items = data.items || [];
+                
+                // Temukan motor yang dicari berdasarkan Plat Nomor [1.1]
+                const motorMatch = items.find(item => String(item[0]).trim().toUpperCase() === targetMotor);
+
+                if (motorMatch) {
+                    const plat = motorMatch[0];
+                    const tipe = motorMatch[1];
+                    const brand = motorMatch[2];
+                    const status = motorMatch[5];
+                    const lat = parseFloat(motorMatch[6]); // Mengambil Lintang dari indeks ke-6 [1.1]
+                    const lng = parseFloat(motorMatch[7]); // Mengambil Bujur dari indeks ke-7 [1.1]
+
+                    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+                        document.getElementById('lblUnit').innerText = `${brand} ${tipe}`;
+                        document.getElementById('lblPlat').innerText = `License Plate: ${plat}`;
+                        document.getElementById('lblCoords').innerText = "GPS Offline / No Signal";
+                        return;
+                    }
+
+                    // Update Panel Info UI secara dinamis
+                    document.getElementById('lblUnit').innerText = `${brand} ${tipe}`;
+                    document.getElementById('lblPlat').innerText = `License Plate: ${plat}`;
+                    document.getElementById('lblCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+                    document.getElementById('lblStatus').innerText = status.toUpperCase();
+                    
+                    const d = new Date();
+                    document.getElementById('lblTime').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} WITA`;
+
+                    // Taruh Pin di Peta dan Arahkan Kamera otomatis ke Lokasi Motor [1.1]
+                    const targetLatLng = [lat, lng];
+                    map.setView(targetLatLng, 15);
+
+                    // Hapus marker lama jika ada (agar tidak tumpang tindih saat di-refresh), lalu buat baru [1.1]
+                    if (window.currentMarker) {
+                        map.removeLayer(window.currentMarker);
+                    }
+                    
+                    window.currentMarker = L.marker(targetLatLng, {icon: motorIcon}).addTo(map)
+                        .bindPopup(`<b>${brand} ${tipe}</b><br>${plat}`)
+                        .openPopup();
+
+                } else {
+                    document.getElementById('lblUnit').innerText = "Unit Not Found";
+                    document.getElementById('lblCoords').innerText = "Error: Invalid Plate Number";
+                }
+
+            } catch (e) {
+                console.error("Gagal tracking GPS:", e);
+            }
+        }
+
+        // Jalankan tracking di awal
+        trackGps();
+    </script>
+</body>
+</html>
