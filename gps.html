@@ -82,8 +82,9 @@
 
                 const items = data.items || [];
                 
-                // Temukan motor yang dicari berdasarkan Plat Nomor [1.1]
-                const motorMatch = items.find(item => String(item[0]).trim().toUpperCase() === targetMotor);
+                // 🌟 UPDATE: Pencocokan Plat Motor Kebal Spasi (Space-Insensitive Match) [1.1]
+                const cleanTargetMotor = targetMotor.replace(/\s/g, "").toUpperCase(); // Hilangkan spasi dari URL
+                const motorMatch = items.find(item => String(item[0]).replace(/\s/g, "").toUpperCase() === cleanTargetMotor); // Hilangkan spasi dari DB
 
                 if (motorMatch) {
                     const plat = motorMatch[0];
