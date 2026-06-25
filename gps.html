@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPS Live Tracking - AMS Pro</title>
-    <!-- Leaflet CSS & JS -->
+    <!-- Leaflet CSS & JS (Gratis & Sangat Ringan!) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Bootstrap & FontAwesome -->
@@ -54,17 +54,21 @@
         const targetMotor = (params.get('motor') || '').trim().toUpperCase();
         const tParam = params.get('t') || '';
 
+        // Master GAS URL Terpusat Milik Suhu [1.1]
         const API_URL = `https://script.google.com/macros/s/AKfycbxdnEun8-kSEK_9c0j8kQXMD6VNU8q_D-xGV-33dQ8SM6uuLZiGjDewh-RNPWq4YBHk/exec?token=${token}&t=${tParam}`;
 
+        // Inisialisasi Peta Leaflet (Default center ke Bali) [1.1]
         const map = L.map('map').setView([-8.4095, 115.1889], 11);
 
+        // Gunakan Tile Layer OpenStreetMap Gratis (Bebas Biaya API Google!) [1.1]
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
+        // Atur Icon Pin Motor Kustom yang Keren [1.1]
         const motorIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png', 
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png', // Ikon motor bulat khas MRD
             iconSize: [45, 45],
             iconAnchor: [22, 22],
             popupAnchor: [0, -20]
@@ -84,16 +88,18 @@
                 }
 
                 const items = data.items || [];
-                const cleanTargetMotor = targetMotor.replace(/\s/g, "").toUpperCase();
-                const motorMatch = items.find(item => String(item[0]).replace(/\s/g, "").toUpperCase() === cleanTargetMotor);
+                
+                // 🌟 UPDATE: Pencocokan Plat Motor Kebal Spasi (Space-Insensitive Match) [1.1]
+                const cleanTargetMotor = targetMotor.replace(/\s/g, "").toUpperCase(); // Hilangkan spasi dari URL
+                const motorMatch = items.find(item => String(item[0]).replace(/\s/g, "").toUpperCase() === cleanTargetMotor); // Hilangkan spasi dari DB
 
                 if (motorMatch) {
                     const plat = motorMatch[0];
                     const tipe = motorMatch[1];
                     const brand = motorMatch[2];
                     const status = motorMatch[5];
-                    const lat = parseFloat(motorMatch[6]); 
-                    const lng = parseFloat(motorMatch[7]); 
+                    const lat = parseFloat(motorMatch[6]); // Mengambil Lintang dari indeks ke-6 [1.1]
+                    const lng = parseFloat(motorMatch[7]); // Mengambil Bujur dari indeks ke-7 [1.1]
 
                     if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
                         document.getElementById('lblUnit').innerText = `${brand} ${tipe}`;
@@ -103,6 +109,7 @@
                         return;
                     }
 
+                    // Update Panel Info UI secara dinamis
                     document.getElementById('lblUnit').innerText = `${brand} ${tipe}`;
                     document.getElementById('lblPlat').innerText = `License Plate: ${plat}`;
                     document.getElementById('lblCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
@@ -111,9 +118,11 @@
                     const d = new Date();
                     document.getElementById('lblTime').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} WITA`;
 
+                    // Taruh Pin di Peta dan Arahkan Kamera otomatis ke Lokasi Motor [1.1]
                     const targetLatLng = [lat, lng];
                     map.setView(targetLatLng, 15);
 
+                    // Hapus marker lama jika ada (agar tidak tumpang tindih saat di-refresh), lalu buat baru [1.1]
                     if (window.currentMarker) {
                         map.removeLayer(window.currentMarker);
                     }
@@ -138,6 +147,7 @@
             }
         }
 
+        // Jalankan tracking di awal
         trackGps();
     </script>
 </body>
